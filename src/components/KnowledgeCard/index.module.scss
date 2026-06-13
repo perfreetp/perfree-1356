@@ -1,0 +1,86 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  transition: all $transition-base;
+  border-left: 8rpx solid $color-primary;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-md;
+}
+
+.categoryBadge {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-sm;
+  font-weight: 500;
+
+  &.prevention { background: #ECFDF5; color: #059669; }
+  &.treatment { background: #DBEAFE; color: #2563EB; }
+  &.recovery { background: #FEF3C7; color: #D97706; }
+  &.emergency { background: #FEE2E2; color: #DC2626; }
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
+  line-height: 1.4;
+  flex: 1;
+  margin-right: $spacing-md;
+}
+
+.summary {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-md;
+  padding-left: $spacing-md;
+  border-left: 4rpx solid $color-primary-50;
+}
+
+.content {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  padding: $spacing-md;
+  background: $color-divider;
+  border-radius: $radius-sm;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.tag {
+  padding: 6rpx 16rpx;
+  background: $color-primary-50;
+  color: $color-primary-dark;
+  border-radius: $radius-xs;
+  font-size: $font-size-sm;
+}
+
+.toggleBtn {
+  @include button-reset;
+  margin-top: $spacing-md;
+  padding: 0 $spacing-md;
+  height: 64rpx;
+  background: $color-primary-50;
+  color: $color-primary;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  &:active { opacity: 0.8; }
+}

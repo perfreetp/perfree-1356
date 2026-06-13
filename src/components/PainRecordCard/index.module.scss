@@ -1,0 +1,120 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-md;
+}
+
+.partBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 20rpx;
+  background: $color-primary-50;
+  color: $color-primary-dark;
+  border-radius: $radius-sm;
+  font-size: $font-size-md;
+  font-weight: 500;
+}
+
+.dateText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.painLevelSection {
+  margin-bottom: $spacing-md;
+}
+
+.painLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.painValue {
+  font-size: $font-size-xl;
+  font-weight: 700;
+}
+
+.painBar {
+  height: 12rpx;
+  background: $color-divider;
+  border-radius: $radius-round;
+  overflow: hidden;
+}
+
+.painFill {
+  height: 100%;
+  border-radius: $radius-round;
+  transition: width $transition-base;
+}
+
+.painMarks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+}
+
+.descText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+  background: $color-divider;
+  padding: $spacing-md;
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-md;
+}
+
+.statusRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-sm;
+  display: inline-flex;
+  align-items: center;
+}
+
+.statusTag {
+  &.worsening { background: $color-bg-danger; color: $color-error; }
+  &.unchanged { background: #F1F5F9; color: #64748B; }
+  &.improving { background: $color-bg-tag; color: $color-primary-dark; }
+  &.recovered { background: $color-primary; color: #fff; }
+}
+
+.triggerTag {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.measureTag {
+  background: #DBEAFE;
+  color: #2563EB;
+}
+
+.sectionTitle {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xs;
+  margin-top: $spacing-sm;
+}

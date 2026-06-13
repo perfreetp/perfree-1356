@@ -1,0 +1,291 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  padding: $spacing-lg $page-padding 120rpx;
+  min-height: 100vh;
+}
+
+.headerCard {
+  background: linear-gradient(135deg, $color-danger 0%, #DC2626 100%);
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  color: #fff;
+  margin-bottom: $spacing-lg;
+  box-shadow: 0 8rpx 32rpx rgba(239, 68, 68, 0.3);
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: 700;
+  margin-bottom: $spacing-sm;
+}
+
+.headerSubtitle {
+  font-size: $font-size-md;
+  opacity: 0.92;
+  line-height: 1.6;
+}
+
+.statsRow {
+  display: flex;
+  justify-content: space-around;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1rpx solid rgba(255,255,255,0.2);
+}
+
+.statItem {
+  text-align: center;
+}
+
+.statNum {
+  display: block;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.formCard {
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.formSection {
+  margin-bottom: $spacing-lg;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.formLabel {
+  display: block;
+  font-size: $font-size-md;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.formLabelHint {
+  font-size: $font-size-sm;
+  font-weight: 400;
+  color: $color-text-tertiary;
+  margin-left: $spacing-sm;
+}
+
+.bodyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.bodyItem {
+  padding: $spacing-md $spacing-sm;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  text-align: center;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  transition: all $transition-base;
+  background: #fff;
+
+  &.selected {
+    background: $color-bg-danger;
+    border-color: $color-danger;
+    color: $color-danger;
+    font-weight: 500;
+  }
+  &:active { transform: scale(0.97); }
+}
+
+.sliderWrap {
+  padding: $spacing-md 0;
+}
+
+.vasScale {
+  margin-bottom: $spacing-md;
+}
+
+.vasRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.vasFace {
+  font-size: 48rpx;
+  text-align: center;
+  margin-bottom: $spacing-sm;
+}
+
+.vasValue {
+  display: block;
+  text-align: center;
+  font-size: 64rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.painLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $spacing-sm;
+  padding: 0 $spacing-sm;
+}
+
+.painLabel {
+  text-align: center;
+  font-size: 22rpx;
+  color: $color-text-tertiary;
+  flex: 1;
+}
+
+.checkGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.checkItem {
+  padding: 16rpx 24rpx;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  background: #fff;
+  transition: all $transition-base;
+
+  &.selected {
+    background: $color-primary-50;
+    border-color: $color-primary;
+    color: $color-primary-dark;
+    font-weight: 500;
+  }
+  &:active { transform: scale(0.97); }
+}
+
+.statusGroup {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+}
+
+.statusItem {
+  padding: $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  text-align: center;
+  transition: all $transition-base;
+
+  &.selected {
+    background: $color-primary;
+    border-color: $color-primary;
+    color: #fff;
+  }
+}
+
+.statusIcon {
+  font-size: 40rpx;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.statusText {
+  font-size: $font-size-sm;
+}
+
+.textArea {
+  width: 100%;
+  background: $color-divider;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  min-height: 160rpx;
+  line-height: 1.6;
+}
+
+.btnRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.btn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: 600;
+  transition: all $transition-base;
+
+  &.primary {
+    background: linear-gradient(135deg, $color-danger 0%, #DC2626 100%);
+    color: #fff;
+    box-shadow: 0 4rpx 20rpx rgba(239, 68, 68, 0.3);
+    &:active { opacity: 0.9; transform: scale(0.98); }
+  }
+  &.secondary {
+    background: #fff;
+    color: $color-text-secondary;
+    border: 2rpx solid $color-border;
+    &:active { background: $color-divider; }
+  }
+  &.disabled {
+    background: $color-border;
+    color: $color-text-tertiary;
+    box-shadow: none;
+  }
+}
+
+.historySection {
+  margin-top: $spacing-xl;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  padding: 0 $spacing-xs;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.sectionCount {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.emptyState {
+  padding: $spacing-xl * 2;
+  text-align: center;
+  background: #fff;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.emptyIcon {
+  font-size: 120rpx;
+  opacity: 0.5;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+}

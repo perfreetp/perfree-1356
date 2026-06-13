@@ -1,0 +1,177 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  padding: $spacing-lg $page-padding 120rpx;
+  min-height: 100vh;
+}
+
+.headerCard {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  color: #fff;
+  margin-bottom: $spacing-lg;
+  box-shadow: 0 8rpx 32rpx rgba(59, 130, 246, 0.3);
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: 700;
+  margin-bottom: $spacing-sm;
+}
+
+.headerSubtitle {
+  font-size: $font-size-md;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+.headerTips {
+  margin-top: $spacing-lg;
+  padding: $spacing-md;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  line-height: 1.7;
+}
+
+.tabBar {
+  display: flex;
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-xs;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.tabItem {
+  flex: 1;
+  text-align: center;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  font-weight: 500;
+  color: $color-text-secondary;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-primary;
+    color: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(16, 185, 129, 0.3);
+  }
+}
+
+.filterBar {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+}
+
+.filterTag {
+  padding: 12rpx 24rpx;
+  background: #fff;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-primary-50;
+    border-color: $color-primary;
+    color: $color-primary-dark;
+    font-weight: 500;
+  }
+}
+
+.summaryBar {
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-card;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.summaryItem {
+  text-align: center;
+
+  &:not(:last-child) {
+    border-right: 1rpx solid $color-divider;
+    padding-right: $spacing-xl;
+  }
+}
+
+.summaryNum {
+  display: block;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: $color-primary;
+  line-height: 1.2;
+}
+
+.summaryLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  padding: 0 $spacing-xs;
+}
+
+.sectionTitleText {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.sectionCount {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  background: $color-divider;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+}
+
+.startAllBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-secondary 0%, $color-secondary-dark 100%);
+  color: #fff;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: 600;
+  box-shadow: 0 4rpx 20rpx rgba(249, 115, 22, 0.3);
+  margin-top: $spacing-lg;
+  &:active { opacity: 0.9; transform: scale(0.98); }
+}
+
+.emptyState {
+  padding: $spacing-xl * 2;
+  text-align: center;
+  background: #fff;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.emptyIcon {
+  font-size: 120rpx;
+  opacity: 0.5;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+}

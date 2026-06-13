@@ -1,0 +1,332 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  padding: $spacing-lg $page-padding 120rpx;
+  min-height: 100vh;
+}
+
+.headerCard {
+  background: linear-gradient(135deg, $color-secondary 0%, $color-secondary-dark 100%);
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  color: #fff;
+  margin-bottom: $spacing-lg;
+  box-shadow: 0 8rpx 32rpx rgba(249, 115, 22, 0.3);
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: 700;
+  margin-bottom: $spacing-sm;
+}
+
+.headerSubtitle {
+  font-size: $font-size-md;
+  opacity: 0.92;
+  line-height: 1.6;
+}
+
+.quickActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.quickBtn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10rpx);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  text-align: center;
+  transition: all $transition-base;
+  &:active { transform: scale(0.96); background: rgba(255,255,255,0.3); }
+}
+
+.quickBtnIcon {
+  font-size: 48rpx;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.quickBtnText {
+  font-size: $font-size-sm;
+  font-weight: 500;
+}
+
+.tabBar {
+  display: flex;
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-xs;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.tabItem {
+  flex: 1;
+  text-align: center;
+  padding: $spacing-md $spacing-sm;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: $color-text-secondary;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-secondary;
+    color: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(249, 115, 22, 0.3);
+  }
+}
+
+.planCard {
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  position: relative;
+  overflow: hidden;
+
+  &.rest { border-top: 8rpx solid #10B981; }
+  &.alternative { border-top: 8rpx solid #3B82F6; }
+  &.recovery { border-top: 8rpx solid #F59E0B; }
+}
+
+.planHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-md;
+}
+
+.planTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.planMeta {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.planMetaTag {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-sm;
+  background: $color-divider;
+  color: $color-text-secondary;
+}
+
+.planDesc {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.planSteps {
+  padding-left: $spacing-sm;
+}
+
+.planStep {
+  display: flex;
+  align-items: flex-start;
+  padding: 12rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: 1.6;
+}
+
+.stepNum {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: $color-primary-50;
+  color: $color-primary-dark;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+}
+
+.planBtnRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.planBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: 500;
+  transition: all $transition-base;
+
+  &.primary {
+    background: $color-secondary;
+    color: #fff;
+    &:active { opacity: 0.85; transform: scale(0.98); }
+  }
+  &.secondary {
+    background: #fff;
+    color: $color-secondary;
+    border: 2rpx solid $color-secondary;
+  }
+}
+
+.reminderSection {
+  margin-top: $spacing-xl;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  padding: 0 $spacing-xs;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.addBtn {
+  padding: 8rpx 20rpx;
+  background: $color-primary;
+  color: #fff;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: 500;
+}
+
+.reminderCard {
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  display: flex;
+  align-items: flex-start;
+  transition: all $transition-base;
+
+  &.done {
+    opacity: 0.5;
+    .reminderTitle { text-decoration: line-through; }
+  }
+}
+
+.reminderCheck {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-border;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #fff;
+  transition: all $transition-base;
+
+  .done & {
+    background: $color-success;
+    border-color: $color-success;
+  }
+}
+
+.reminderContent {
+  flex: 1;
+}
+
+.reminderDate {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.typeTag {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+
+  &.recovery { background: #FEF3C7; color: #D97706; }
+  &.training { background: #DBEAFE; color: #2563EB; }
+  &.check { background: #ECFDF5; color: #059669; }
+}
+
+.reminderTitle {
+  font-size: $font-size-md;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.reminderDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}
+
+.emergencyCard {
+  background: linear-gradient(135deg, $color-danger 0%, #B91C1C 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  margin-top: $spacing-xl;
+  color: #fff;
+  box-shadow: 0 8rpx 32rpx rgba(239, 68, 68, 0.3);
+}
+
+.emergencyTitle {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  margin-bottom: $spacing-md;
+}
+
+.emergencyItem {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-sm 0;
+  font-size: $font-size-md;
+  line-height: 1.6;
+  border-bottom: 1rpx solid rgba(255,255,255,0.15);
+
+  &:last-child { border-bottom: none; }
+}
+
+.emergencyDot {
+  margin-right: $spacing-sm;
+  font-weight: bold;
+}
+
+.callBtn {
+  @include button-reset;
+  margin-top: $spacing-lg;
+  width: 100%;
+  height: $button-height-lg;
+  background: #fff;
+  color: $color-danger;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: 700;
+  &:active { transform: scale(0.98); opacity: 0.9; }
+}
