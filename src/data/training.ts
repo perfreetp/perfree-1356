@@ -10,6 +10,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'low',
     targetParts: ['back', 'waist', 'knee', 'ankle', 'shoulder'],
     suitableRiskLevels: ['medium', 'high'],
+    defaultDurationDays: 2,
+    scheduleNote: '连续2天完全休息，穿插轻微活动，第3天根据恢复情况复训',
     items: [
       '保证8小时优质睡眠',
       '20-30分钟慢走散步',
@@ -27,6 +29,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'low',
     targetParts: ['ankle', 'calf', 'foot'],
     suitableRiskLevels: ['low', 'medium', 'high'],
+    defaultDurationDays: 4,
+    scheduleNote: '踝部制动期使用，每天1次，4天后评估能否恢复低强度跑步',
     items: [
       '坐姿上身力量训练30分钟',
       '游泳或水中有氧20分钟',
@@ -44,6 +48,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'medium',
     targetParts: ['knee', 'hip', 'calf'],
     suitableRiskLevels: ['low', 'medium', 'high'],
+    defaultDurationDays: 5,
+    scheduleNote: '膝关节敏感期使用，连续5天低冲击训练，避免下蹲和跑跳',
     items: [
       '椭圆机或划船机25分钟（低阻力）',
       '坐姿腿屈伸 3组×15次',
@@ -61,6 +67,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'low',
     targetParts: ['waist', 'back', 'hip'],
     suitableRiskLevels: ['medium', 'high'],
+    defaultDurationDays: 7,
+    scheduleNote: '腰部急性不适后的标准7天恢复方案，严格按阶段执行',
     items: [
       '第1-2天：卧床休息+热敷，避免弯腰',
       '第3-4天：猫牛式、桥式运动，每组10次',
@@ -78,6 +86,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'low',
     targetParts: ['shoulder', 'elbow', 'wrist'],
     suitableRiskLevels: ['medium', 'high'],
+    defaultDurationDays: 10,
+    scheduleNote: '肩袖损伤/炎症的10天标准康复周期，切勿过早恢复大重量',
     items: [
       '第1-3天：休息+冰敷，避免抬臂',
       '第4-6天：钟摆运动，Codman体操',
@@ -95,6 +105,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'medium',
     targetParts: ['knee', 'ankle', 'calf', 'hip'],
     suitableRiskLevels: ['low', 'medium'],
+    defaultDurationDays: 7,
+    scheduleNote: '连续大强度后安排一周减量周，每周最多1次',
     items: [
       '总跑量减少40-50%',
       '配速降低30-60秒/公里',
@@ -112,6 +124,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'low',
     targetParts: ['neck', 'shoulder'],
     suitableRiskLevels: ['low', 'medium'],
+    defaultDurationDays: 3,
+    scheduleNote: '颈部不适出现后连续执行3天，症状消失后可立即停止',
     items: [
       '温热敷颈部15分钟，每天2次',
       '颈部米字操，每个方向10次',
@@ -129,6 +143,8 @@ export const TRAINING_PLANS: TrainingPlan[] = [
     intensity: 'medium',
     targetParts: ['shoulder', 'elbow', 'wrist', 'chest'],
     suitableRiskLevels: ['low', 'medium'],
+    defaultDurationDays: 4,
+    scheduleNote: '肩肘不适期的上肢训练替代，连续4天后评估是否可回归常规',
     items: [
       '坐姿划船 3组×12次',
       '弹力带面拉 3组×15次',

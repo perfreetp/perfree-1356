@@ -45,6 +45,8 @@ export interface TrainingPlan {
   items: string[];
   targetParts: BodyPart[];
   suitableRiskLevels: RiskLevel[];
+  defaultDurationDays: number;
+  scheduleNote: string;
 }
 
 export interface ReminderItem {
@@ -56,6 +58,10 @@ export interface ReminderItem {
   planType?: PlanType;
   done: boolean;
   completedAt?: number;
+  originPlanId?: string;
+  scheduleStartDate?: string;
+  scheduleDayIndex?: number;
+  scheduleTotalDays?: number;
 }
 
 export interface PainRecord {
@@ -78,6 +84,7 @@ export interface TrainingRecord {
   intensity: number;
   completed: boolean;
   note?: string;
+  sets?: number;
 }
 
 export interface KnowledgeCard {
@@ -92,16 +99,20 @@ export interface KnowledgeCard {
 export interface WeeklyTrend {
   date: string;
   dateKey: string;
+  dayOfWeek: string;
   painCount: number;
   avgPainLevel: number;
   recoveryImprovingCount: number;
   trainingHours: number;
+  trainingMinutes: number;
   trainingCount: number;
   riskScore: number;
   riskLevel: RiskLevel | null;
   assessmentCount: number;
   reminderCompletedCount: number;
   reminderTotalCount: number;
+  trainingRecords: TrainingRecord[];
+  reminders: ReminderItem[];
 }
 
 export interface UserProfile {
@@ -118,6 +129,24 @@ export interface UserProfile {
 
 export interface SmartRecommendation {
   planId: string;
+  plan: TrainingPlan;
+  matchScore: number;
+  matchPercentage: number;
   reason: string;
+  detailedReasons: string[];
+  recommendedDurationDays: number;
+  scheduleHint: string;
   priority: number;
+}
+
+export interface DayScheduleItem {
+  dateKey: string;
+  dateDisplay: string;
+  dayOfWeek: string;
+  isToday: boolean;
+  reminders: ReminderItem[];
+  trainingRecords: TrainingRecord[];
+  painCount: number;
+  riskLevel: RiskLevel | null;
+  hasActivity: boolean;
 }

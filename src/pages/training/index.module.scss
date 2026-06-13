@@ -445,3 +445,405 @@
   font-size: $font-size-md;
   line-height: 1.6;
 }
+
+.viewTabs {
+  display: flex;
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: 6rpx;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.viewTab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 12rpx;
+  border-radius: $radius-md;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: $color-text-secondary;
+  transition: all 0.15s;
+
+  &.active {
+    background: $color-primary;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 4rpx 16rpx rgba(16, 185, 129, 0.25);
+  }
+}
+
+.weekNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  background: #fff;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.weekNavBtn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-round;
+  background: $color-divider;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  color: $color-text-secondary;
+  &:active { background: $color-primary-50; color: $color-primary; }
+}
+
+.weekNavLabel {
+  font-size: $font-size-md;
+  font-weight: 700;
+  color: $color-text-primary;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+  .sub { font-size: 22rpx; color: $color-text-secondary; font-weight: 400; }
+}
+
+.calendarGrid {
+  background: #fff;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.calWeekHeader {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: linear-gradient(180deg, $color-primary-50 0%, #fff 100%);
+  border-bottom: 2rpx solid $color-divider;
+}
+
+.calWeekTitle {
+  text-align: center;
+  padding: $spacing-sm 4rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: $color-text-secondary;
+
+  &.sun, &.sat { color: #EF4444; }
+}
+
+.calBody {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calDay {
+  aspect-ratio: 1 / 1.25;
+  padding: 6rpx 4rpx;
+  border-right: 1rpx solid $color-divider;
+  border-bottom: 1rpx solid $color-divider;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+
+  &:nth-child(7n) { border-right: none; }
+  &:nth-last-child(-n+7) { border-bottom: none; }
+
+  &.selected {
+    background: linear-gradient(135deg, $color-primary-50 0%, #F0FDF4 100%);
+    box-shadow: inset 0 0 0 3rpx $color-primary;
+  }
+  &.today {
+    background: linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%);
+    .calDayDate { font-weight: 800; color: #C2410C; }
+  }
+  &.hasActivity::before {
+    content: '';
+    position: absolute;
+    top: 4rpx;
+    right: 4rpx;
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: $radius-round;
+    background: $color-primary;
+  }
+}
+
+.calDayDate {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $color-text-primary;
+  text-align: center;
+  &.otherMonth { color: #CBD5E1; font-weight: 400; }
+}
+
+.calDayDots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+  flex: 1;
+  padding-top: 4rpx;
+  width: 100%;
+}
+
+.calDot {
+  width: 70%;
+  max-width: 60rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  &.rest { background: #06B6D4; }
+  &.alternative { background: #8B5CF6; }
+  &.recovery { background: #10B981; }
+  &.training { background: #3B82F6; }
+  &.check { background: #F59E0B; }
+  &.pain { background: #EF4444; height: 10rpx; }
+  &.risk { background: #F97316; height: 6rpx; }
+}
+
+.calDayCount {
+  font-size: 18rpx;
+  color: $color-text-tertiary;
+}
+
+.daySchedule {
+  background: #fff;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.dayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: $spacing-md;
+  margin-bottom: $spacing-md;
+  border-bottom: 2rpx solid $color-divider;
+}
+
+.dayTitle {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  .dot { color: $color-primary; }
+  .today {
+    padding: 4rpx 14rpx;
+    background: $color-secondary;
+    color: #fff;
+    font-size: 22rpx;
+    border-radius: 24rpx;
+    font-weight: 600;
+  }
+}
+
+.dayQuickAdd {
+  padding: 10rpx 22rpx;
+  background: $color-primary;
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: $radius-button;
+  font-weight: 600;
+  &:active { opacity: 0.85; transform: scale(0.97); }
+}
+
+.daySubInfo {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-md;
+}
+
+.dayBadge {
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: 22rpx;
+  font-weight: 500;
+  &.risk { background: #FEF3C7; color: #D97706; }
+  &.pain { background: #FEE2E2; color: #DC2626; }
+  &.total { background: #EFF6FF; color: #2563EB; }
+  &.done { background: #ECFDF5; color: #059669; }
+}
+
+.schedReminder {
+  display: flex;
+  padding: $spacing-md;
+  background: $color-divider;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-sm;
+  gap: $spacing-sm;
+  align-items: center;
+  border-left: 6rpx solid $color-primary;
+  transition: all 0.15s;
+
+  &.rest { border-left-color: #06B6D4; }
+  &.alternative { border-left-color: #8B5CF6; }
+  &.recovery { border-left-color: #10B981; }
+  &.training { border-left-color: #3B82F6; }
+  &.check { border-left-color: #F59E0B; }
+  &.done { opacity: 0.55; border-left-color: #94A3B8; }
+}
+
+.schedTick {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+  .done & {
+    background: $color-success;
+    border-color: $color-success;
+  }
+}
+
+.schedInfo {
+  flex: 1;
+  min-width: 0;
+  .title { font-size: 28rpx; font-weight: 600; color: $color-text-primary; }
+  .tag { display:inline-block; padding: 0 12rpx; border-radius: 8rpx; font-size: 20rpx; margin-right: 8rpx;
+    background: $color-divider; color: $color-text-secondary; font-weight: 500;
+  }
+  .done .title { text-decoration: line-through; color: $color-text-tertiary; }
+  .desc { font-size: 22rpx; color: $color-text-secondary; margin-top: 4rpx; line-height: 1.4; }
+}
+
+.schedActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+
+.shiftBtn {
+  padding: 6rpx 12rpx;
+  background: #fff;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  color: $color-text-secondary;
+  border: 1rpx solid $color-divider;
+}
+
+.delBtn {
+  padding: 6rpx 12rpx;
+  background: #FEE2E2;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  color: #DC2626;
+  font-weight: 500;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx 16rpx;
+  padding: $spacing-sm;
+  background: #fff;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+  justify-content: center;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 22rpx;
+  color: $color-text-secondary;
+}
+
+.legendBar {
+  width: 32rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  &.rest { background: #06B6D4; }
+  &.alternative { background: #8B5CF6; }
+  &.recovery { background: #10B981; }
+  &.training { background: #3B82F6; }
+  &.check { background: #F59E0B; }
+  &.pain { background: #EF4444; }
+  &.risk { background: #F97316; }
+}
+
+.recCardBottom {
+  display: flex;
+  gap: 8rpx;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx dashed $color-divider;
+}
+
+.recReasonChip {
+  padding: 4rpx 12rpx;
+  background: #FEF3C7;
+  color: #92400E;
+  border-radius: 16rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.recDays {
+  padding: 4rpx 12rpx;
+  background: #F0FDF4;
+  color: #047857;
+  border-radius: 16rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.recScheduleHint {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm;
+  background: #FFFBEB;
+  border-radius: $radius-sm;
+  border-left: 4rpx solid #F59E0B;
+}
+
+.planDurationRow {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  strong { color: $color-secondary-dark; font-size: $font-size-md; }
+}
+
+.schedSectionTitle {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: $color-text-primary;
+  margin: $spacing-md 0 $spacing-sm;
+  padding-left: 12rpx;
+  border-left: 6rpx solid $color-primary;
+}
+
+.dayScheduleEmpty {
+  padding: $spacing-xl $spacing-md;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: 26rpx;
+  line-height: 1.7;
+  .icon { font-size: 72rpx; display: block; margin-bottom: $spacing-sm; opacity: 0.4; }
+}

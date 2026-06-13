@@ -645,3 +645,306 @@
   color: $color-text-tertiary;
   font-size: $font-size-sm;
 }
+
+.weekNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.weekNavBtn {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: $radius-round;
+  background: $color-divider;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: $color-text-secondary;
+  &:active { background: $color-primary-50; color: $color-primary; }
+}
+
+.weekLabel {
+  font-size: $font-size-md;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.trendBarDay {
+  padding: 0 2rpx;
+  transition: all 0.2s;
+  border-radius: $radius-xs;
+
+  &.selected {
+    background: $color-primary-50;
+    box-shadow: 0 0 0 3rpx $color-primary;
+    transform: scale(1.02);
+  }
+  &.hasActivity {
+    position: relative;
+    .trendLabel { color: $color-primary; font-weight: 600; }
+  }
+}
+
+.dayDetailPanel {
+  margin-top: $spacing-md;
+  padding: $spacing-lg;
+  background: linear-gradient(135deg, #fafbff 0%, #f0f9ff 100%);
+  border-radius: $radius-md;
+  border: 2rpx solid $color-primary-50;
+}
+
+.dayDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-sm;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.dayDetailTitle {
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $color-text-primary;
+  .dot { color: $color-primary; margin-right: 8rpx; }
+}
+
+.daySummaryBadges {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-md;
+}
+
+.badge {
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: 22rpx;
+  font-weight: 500;
+  &.risk { background: #FEF3C7; color: #D97706; }
+  &.pain { background: #FEE2E2; color: #DC2626; }
+  &.done { background: #ECFDF5; color: #059669; }
+  &.pend { background: #EFF6FF; color: #2563EB; }
+}
+
+.detailSubTitle {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin: $spacing-sm 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.detailEmpty {
+  padding: $spacing-md;
+  text-align: center;
+  font-size: 24rpx;
+  color: $color-text-tertiary;
+  background: #fff;
+  border-radius: $radius-sm;
+}
+
+.miniTraining {
+  padding: $spacing-sm $spacing-md;
+  background: #fff;
+  border-radius: $radius-sm;
+  border-left: 6rpx solid #3B82F6;
+  margin-bottom: $spacing-xs;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-sm;
+
+  &.pending { border-left-color: #94A3B8; opacity: 0.8; }
+}
+
+.miniTrainInfo {
+  flex: 1;
+  min-width: 0;
+  .title { font-size: 26rpx; font-weight: 600; color: $color-text-primary; }
+  .meta { font-size: 22rpx; color: $color-text-secondary; margin-top: 2rpx; }
+}
+
+.miniTrainStats {
+  text-align: right;
+  flex-shrink: 0;
+  .num { font-size: 28rpx; font-weight: 700; color: #3B82F6; }
+  .label { font-size: 20rpx; color: $color-text-tertiary; }
+}
+
+.miniReminder {
+  padding: $spacing-sm $spacing-md;
+  background: #fff;
+  border-radius: $radius-sm;
+  border-left: 6rpx solid #8B5CF6;
+  margin-bottom: $spacing-xs;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-sm;
+
+  &.rest { border-left-color: #06B6D4; }
+  &.alternative { border-left-color: #8B5CF6; }
+  &.recovery { border-left-color: #10B981; }
+  &.training { border-left-color: #3B82F6; }
+  &.check { border-left-color: #F59E0B; }
+  &.doneItem { opacity: 0.55; border-left-color: #94A3B8; }
+}
+
+.miniRemInfo {
+  flex: 1;
+  min-width: 0;
+  .title { font-size: 26rpx; font-weight: 600; color: $color-text-primary; }
+  .tag { display:inline-block; padding: 0 10rpx; border-radius: 8rpx; font-size: 20rpx; margin-right: 8rpx; background: $color-divider; color: $color-text-secondary; }
+  &.rest .tag { background: #CFFAFE; color: #0E7490; }
+  &.alternative .tag { background: #EDE9FE; color: #6D28D9; }
+  &.recovery .tag { background: #D1FAE5; color: #047857; }
+  &.training .tag { background: #DBEAFE; color: #1D4ED8; }
+  &.check .tag { background: #FEF3C7; color: #92400E; }
+  &.doneItem .title { text-decoration: line-through; color: $color-text-tertiary; }
+}
+
+.miniRemActions {
+  display: flex;
+  gap: 8rpx;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.tick {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
+  &.checked { background: $color-success; border-color: $color-success; }
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.summaryBox {
+  text-align: center;
+  padding: $spacing-sm;
+  background: #fff;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-divider;
+
+  &.highlight { background: linear-gradient(135deg, $color-primary-50 0%, #fff 100%); border-color: #C7D2FE; }
+}
+
+.summaryNum {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: $color-primary;
+  display: block;
+  line-height: 1.2;
+  .unit { font-size: 20rpx; color: $color-text-secondary; font-weight: 500; margin-left: 2rpx; }
+}
+
+.summaryLbl {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  display: block;
+  margin-top: 4rpx;
+}
+
+.sportBreakdown {
+  margin-top: $spacing-sm;
+  padding: $spacing-md;
+  background: #fff;
+  border-radius: $radius-md;
+}
+
+.breakdownRow {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0;
+  & + & { border-top: 1rpx dashed $color-divider; }
+}
+
+.bdIcon { font-size: 36rpx; width: 60rpx; text-align: center; }
+.bdName { flex: 1; font-size: 26rpx; color: $color-text-primary; font-weight: 500; }
+.bdBar { flex: 2; height: 16rpx; background: $color-divider; border-radius: 8rpx; overflow: hidden; margin: 0 $spacing-md; }
+.bdFill { height: 100%; border-radius: 8rpx; background: linear-gradient(90deg, $color-primary 0%, #A78BFA 100%); }
+.bdVal { width: 140rpx; text-align: right; font-size: 22rpx; color: $color-text-secondary; font-weight: 600; }
+
+.topSportBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 20rpx;
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border-radius: $radius-button;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #92400E;
+  margin-left: $spacing-sm;
+}
+
+.datePickerRow {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-md;
+}
+
+.dateQuickTag {
+  padding: 12rpx 22rpx;
+  border-radius: $radius-button;
+  background: $color-divider;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  &.selected { background: $color-primary; color: #fff; font-weight: 600; }
+}
+
+.smallHint {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.filterChip {
+  padding: 10rpx 22rpx;
+  border-radius: $radius-button;
+  background: $color-divider;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  border: 2rpx solid transparent;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+
+  &.active {
+    background: $color-primary-50;
+    border-color: $color-primary;
+    color: $color-primary-dark;
+    font-weight: 600;
+  }
+}
+
+.editSvg { font-size: 22rpx; color: $color-primary; }
