@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Button, ScrollView, Input, Slider } from '@tarojs/components';
+import { View, Text, Button, ScrollView, Input, Slider, Canvas } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -54,7 +54,7 @@ const ProfilePage: React.FC = () => {
   const {
     userProfile, updateProfile,
     getWeeklyTrend, getWeeklyTrainingStats, getRecoveryStatusSummary, getWeekRange,
-    getLatestRiskLevel, getWeeklyTimeline, getScheduleAdjustments,
+    getLatestRiskLevel, getWeeklyTimeline, getScheduleAdjustments, getNextWeekRecommendation,
     assessments, painRecords, reminders, trainingRecords,
     addTrainingRecord, updateTrainingRecord, toggleTrainingRecord, deleteTrainingRecord,
     toggleReminder
@@ -67,6 +67,7 @@ const ProfilePage: React.FC = () => {
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [sportFilter, setSportFilter] = useState<SportType | 'all'>('all');
   const [reportView, setReportView] = useState<ReportView>('stats');
+  const [expandedAdjustmentId, setExpandedAdjustmentId] = useState<string | null>(null);
 
   // --- 个人资料编辑 ---
   const [editProfile, setEditProfile] = useState<UserProfile>(userProfile);
@@ -197,6 +198,348 @@ const ProfilePage: React.FC = () => {
   const totalMinutes = stats.totalMinutes;
   const hoursDisplay = Math.floor(totalMinutes / 60);
   const minsDisplay = totalMinutes % 60;
+
+  // --- 导出周报卡片 ---
+  const exportWeeklyCard = () => {
+    const weekNum = weekOffset === 0 ? '本周' : weekOffset === -1 ? '上周' : `${Math.abs(weekOffset)}周前`;
+    const dateStr = `${weekLabel.startKey.replace(/-/g, '.').slice(5)} - ${weekLabel.endKey.replace(/-/g, '.').slice(5)}`;
+
+    const lastWeekTrend = getWeeklyTrend(weekOffset - 1);
+    const lastWeekPainCount = lastWeekTrend.reduce((s, d) => s + d.painCount, 0);
+    const painDelta = painCountWeek - lastWeekPainCount;
+
+    const nextWeekRec = getNextWeekRecommendation();
+
+    const avgRiskColor = avgRiskWeek >= 60 ? '#EF4444' : avgRiskWeek >= 35 ? '#F59E0B' : '#10B981';
+    const painColor = painCountWeek > 3 ? '#EF4444' : '#64748B';
+
+    const createLinearGradient = (ctx, x0, y0, x1, y1, colors: [number, number, number, number, string][]) => {
+      const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+      colors.forEach(([s, _r, _g, _b, c]) => grad.addColorStop(s, c));
+      return grad;
+    };
+
+    const roundedRect = (ctx, x, y, w, h, r: number | number[]) => {
+      if (typeof r === 'number') r = [r, r, r, r];
+      const [tl, tr, br, bl] = r;
+      ctx.beginPath();
+      ctx.moveTo(x + tl, y);
+      ctx.lineTo(x + w - tr, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+      ctx.lineTo(x + w, y + h - br);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+      ctx.lineTo(x + bl, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+      ctx.lineTo(x, y + tl);
+      ctx.quadraticCurveTo(x, y, x + tl, y);
+      ctx.closePath();
+    };
+
+    const drawCard = () => {
+      return new Promise<string>((resolve, reject) => {
+        const query = Taro.createSelectorQuery();
+        query.select('#weeklyCardCanvas')
+          .fields({ node: true, size: true })
+          .exec((res) => {
+            if (!res || !res[0]) {
+              reject(new Error('Canvas 未找到'));
+              return;
+            }
+            const canvas = res[0].node;
+            const ctx = canvas.getContext('2d');
+
+            const dpr = Taro.getSystemInfoSync().pixelRatio || 2;
+            canvas.width = 750 * dpr;
+            canvas.height = 1334 * dpr;
+            ctx.scale(dpr, dpr);
+
+            // 1. 背景渐变
+            const bgGrad = createLinearGradient(ctx, 0, 0, 0, 1334, [
+              [0, 0, 0, 0, '#F8FAFC'],
+              [0.4, 0, 0, 0, '#EFF6FF'],
+              [1, 0, 0, 0, '#F5F3FF']
+            ]);
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, 750, 1334);
+
+            // 2. 装饰圆形
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+            ctx.beginPath();
+            ctx.arc(700, 150, 250, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.06)';
+            ctx.beginPath();
+            ctx.arc(80, 1250, 200, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3. 主卡片背景
+            ctx.fillStyle = '#FFFFFF';
+            roundedRect(ctx, 32, 120, 686, 1060, 32);
+            ctx.fill();
+
+            // 4. 顶部装饰条
+            const headerGrad = createLinearGradient(ctx, 32, 120, 718, 200, [
+              [0, 0, 0, 0, '#6366F1'],
+              [1, 0, 0, 0, '#8B5CF6']
+            ]);
+            ctx.fillStyle = headerGrad;
+            roundedRect(ctx, 32, 120, 686, 160, [32, 32, 0, 0]);
+            ctx.fill();
+
+            // 5. 顶部文字
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 34px sans-serif';
+            ctx.fillText(`${userProfile.name} 的运动周报`, 64, 185);
+            ctx.font = '24px sans-serif';
+            ctx.globalAlpha = 0.9;
+            ctx.fillText(`${weekNum} · ${dateStr}`, 64, 225);
+            ctx.globalAlpha = 1;
+
+            // 6. 头像
+            ctx.fillStyle = '#FEF3C7';
+            ctx.beginPath();
+            ctx.arc(640, 200, 52, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = '44px sans-serif';
+            ctx.fillText('🏃', 614, 215);
+
+            // 7. 核心数据行
+            ctx.fillStyle = '#F8FAFC';
+            roundedRect(ctx, 64, 308, 622, 140, 20);
+            ctx.fill();
+
+            ctx.fillStyle = '#1E293B';
+            ctx.font = 'bold 44px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${hoursDisplay}h ${minsDisplay}分`, 168, 365);
+            ctx.fillText(`${stats.completionRate}%`, 374, 365);
+            ctx.fillText(`${stats.totalCount}`, 580, 365);
+
+            ctx.fillStyle = '#64748B';
+            ctx.font = '22px sans-serif';
+            ctx.fillText('总训练量', 168, 400);
+            ctx.fillText('完成率', 374, 400);
+            ctx.fillText('训练次数', 580, 400);
+            ctx.textAlign = 'left';
+
+            // 8. 分割线
+            ctx.strokeStyle = '#F1F5F9';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(64, 480);
+            ctx.lineTo(686, 480);
+            ctx.stroke();
+
+            // 9. 关键数据标题
+            ctx.fillStyle = '#1E293B';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText('📌 本周关键数据', 64, 525);
+
+            // 10. 4格数据
+            const gridY = 555;
+            const gridW = 295;
+            const gridH = 130;
+            const gridGap = 24;
+
+            // 格1: 周均风险
+            ctx.fillStyle = '#F8FAFC';
+            roundedRect(ctx, 64, gridY, gridW, gridH, 16);
+            ctx.fill();
+            ctx.fillStyle = '#64748B';
+            ctx.font = '24px sans-serif';
+            ctx.fillText('周均风险', 96, gridY + 48);
+            ctx.fillStyle = avgRiskColor;
+            ctx.font = 'bold 36px sans-serif';
+            ctx.fillText(`${avgRiskWeek} 分`, 96, gridY + 95);
+
+            // 格2: 疼痛记录
+            ctx.fillStyle = '#F8FAFC';
+            roundedRect(ctx, 64 + gridW + gridGap, gridY, gridW, gridH, 16);
+            ctx.fill();
+            ctx.fillStyle = '#64748B';
+            ctx.font = '24px sans-serif';
+            ctx.fillText('疼痛记录', 64 + gridW + gridGap + 32, gridY + 48);
+            ctx.fillStyle = painColor;
+            ctx.font = 'bold 36px sans-serif';
+            ctx.fillText(`${painCountWeek} 条`, 64 + gridW + gridGap + 32, gridY + 95);
+
+            // 格3: 好转次数
+            ctx.fillStyle = '#F8FAFC';
+            roundedRect(ctx, 64, gridY + gridH + gridGap, gridW, gridH, 16);
+            ctx.fill();
+            ctx.fillStyle = '#64748B';
+            ctx.font = '24px sans-serif';
+            ctx.fillText('好转次数', 96, gridY + gridH + gridGap + 48);
+            ctx.fillStyle = '#10B981';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.fillText(`${recoverySum.improving + recoverySum.recovered} 次`, 96, gridY + gridH + gridGap + 95);
+
+            // 格4: 训练组数
+            ctx.fillStyle = '#F8FAFC';
+            roundedRect(ctx, 64 + gridW + gridGap, gridY + gridH + gridGap, gridW, gridH, 16);
+            ctx.fill();
+            ctx.fillStyle = '#64748B';
+            ctx.font = '24px sans-serif';
+            ctx.fillText('训练组数', 64 + gridW + gridGap + 32, gridY + gridH + gridGap + 48);
+            ctx.fillStyle = '#3B82F6';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.fillText(`${stats.totalSets} 组`, 64 + gridW + gridGap + 32, gridY + gridH + gridGap + 95);
+
+            // 11. 最常练项目
+            let curY = gridY + gridH * 2 + gridGap * 2 + 40;
+            if (topSportName) {
+              ctx.strokeStyle = '#F1F5F9';
+              ctx.beginPath();
+              ctx.moveTo(64, curY);
+              ctx.lineTo(686, curY);
+              ctx.stroke();
+              curY += 45;
+
+              ctx.fillStyle = '#1E293B';
+              ctx.font = 'bold 28px sans-serif';
+              ctx.fillText('🏆 最常练项目', 64, curY);
+              curY += 20;
+
+              ctx.fillStyle = '#FEF3C7';
+              roundedRect(ctx, 64, curY, 622, 110, 16);
+              ctx.fill();
+
+              ctx.font = '52px sans-serif';
+              ctx.fillText(sportIcon(stats.topSport as SportType), 96, curY + 72);
+              ctx.fillStyle = '#1E293B';
+              ctx.font = 'bold 28px sans-serif';
+              ctx.fillText(topSportName, 180, curY + 55);
+              ctx.fillStyle = '#64748B';
+              ctx.font = '22px sans-serif';
+              ctx.fillText(
+                `本周共 ${stats.bySport[stats.topSport!]?.count || 0} 次，${stats.bySport[stats.topSport!]?.minutes || 0} 分钟`,
+                180, curY + 90
+              );
+              curY += 130;
+            }
+
+            // 12. 疼痛变化 + 下周建议
+            ctx.strokeStyle = '#F1F5F9';
+            ctx.beginPath();
+            ctx.moveTo(64, curY);
+            ctx.lineTo(686, curY);
+            ctx.stroke();
+            curY += 45;
+
+            // 疼痛变化
+            ctx.fillStyle = '#1E293B';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText('📊 疼痛变化', 64, curY);
+            curY += 30;
+
+            const painIcon = painDelta > 0 ? '😣' : painDelta < 0 ? '😊' : '😐';
+            const painText = painDelta > 0
+              ? `疼痛记录增加 ${painDelta} 条，注意休息和恢复`
+              : painDelta < 0
+                ? `疼痛记录减少 ${Math.abs(painDelta)} 条，恢复趋势良好`
+                : '疼痛记录与上周持平，继续保持';
+            const painTextColor = painDelta > 0 ? '#EF4444' : painDelta < 0 ? '#10B981' : '#64748B';
+
+            ctx.fillStyle = painTextColor;
+            ctx.font = '24px sans-serif';
+            ctx.fillText(`${painIcon} ${painText}`, 64, curY);
+            curY += 35;
+
+            // 下周建议
+            ctx.fillStyle = '#1E293B';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText('💡 下周建议', 64, curY);
+            curY += 30;
+
+            if (nextWeekRec) {
+              ctx.fillStyle = '#F0FDF4';
+              roundedRect(ctx, 64, curY, 622, 90, 16);
+              ctx.fill();
+
+              ctx.fillStyle = '#065F46';
+              ctx.font = 'bold 26px sans-serif';
+              ctx.fillText(nextWeekRec.strategyName, 96, curY + 38);
+              ctx.fillStyle = '#047857';
+              ctx.font = '22px sans-serif';
+              ctx.fillText(nextWeekRec.reason.slice(0, 28), 96, curY + 72);
+            } else {
+              ctx.fillStyle = '#F8FAFC';
+              roundedRect(ctx, 64, curY, 622, 70, 16);
+              ctx.fill();
+              ctx.fillStyle = '#64748B';
+              ctx.font = '24px sans-serif';
+              ctx.fillText('继续保持当前训练节奏，注意充分热身', 96, curY + 45);
+            }
+
+            // 13. 底部
+            curY = 1100;
+            ctx.strokeStyle = '#F1F5F9';
+            ctx.beginPath();
+            ctx.moveTo(64, curY);
+            ctx.lineTo(686, curY);
+            ctx.stroke();
+            curY += 45;
+
+            // 鼓励语
+            ctx.fillStyle = '#8B5CF6';
+            ctx.font = 'bold 26px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('坚持就是胜利 · 下周继续加油 💪', 375, curY + 15);
+
+            // 水印
+            curY += 45;
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('运动损伤预防 · 科学训练助手', 375, curY + 15);
+            ctx.fillText(`${weekLabel.startKey} 生成`, 375, curY + 50);
+            ctx.textAlign = 'left';
+
+            // 导出
+            setTimeout(() => {
+              Taro.canvasToTempFilePath({
+                canvas,
+                canvasId: 'weeklyCardCanvas',
+                success: (res2) => resolve(res2.tempFilePath),
+                fail: (err) => reject(err)
+              });
+            }, 200);
+          });
+      });
+    };
+
+    Taro.showLoading({ title: '生成中...', mask: true });
+    drawCard()
+      .then((tempPath) => {
+        Taro.hideLoading();
+        Taro.saveImageToPhotosAlbum({
+          filePath: tempPath,
+          success: () => {
+            Taro.showToast({ title: '已保存到相册', icon: 'success' });
+            Taro.vibrateShort({ type: 'medium' });
+          },
+          fail: (err) => {
+            if (err.errMsg && err.errMsg.includes('auth deny')) {
+              Taro.showModal({
+                title: '需要相册权限',
+                content: '请在设置中开启保存到相册的权限',
+                confirmText: '去设置',
+                success: (res) => {
+                  if (res.confirm) Taro.openSetting();
+                }
+              });
+            } else {
+              Taro.showToast({ title: '保存失败，可尝试截图保存', icon: 'none' });
+            }
+          }
+        });
+      })
+      .catch((err) => {
+        Taro.hideLoading();
+        console.error('生成周报失败:', err);
+        Taro.showToast({ title: '生成失败，可尝试截图保存', icon: 'none' });
+      });
+  };
 
   const handleCall = () => {
     Taro.makePhoneCall({ phoneNumber: userProfile.emergencyContact || '120' }).catch(() => {});
@@ -582,29 +925,109 @@ const ProfilePage: React.FC = () => {
                       </View>
                       {dayItems.length > 0 ? (
                         <View className={styles.tlItems}>
-                          {dayItems.map(item => (
-                            <View key={item.id} className={classnames(styles.tlItem, styles[item.type])}>
-                              <View className={styles.tlDot} />
-                              <View className={styles.tlTime}>{item.timeLabel}</View>
-                              <View className={styles.tlContent}>
-                                <View className={styles.tlTitleRow}>
-                                  <Text className={styles.tlIcon}>{item.icon}</Text>
-                                  <Text className={styles.tlTitle}>{item.title}</Text>
-                                  {item.tag && (
-                                    <Text
-                                      className={styles.tlTag}
-                                      style={{ background: (item.tagColor || '#64748B') + '22', color: item.tagColor || '#64748B' }}
-                                    >
-                                      {item.tag}
-                                    </Text>
+                          {dayItems.map(item => {
+                            const isAdjustment = item.type === 'adjustment';
+                            const adjId = isAdjustment ? item.id.replace('ad_', '') : null;
+                            const isExpanded = isAdjustment && expandedAdjustmentId === adjId;
+                            const adj = adjId ? adjustments.find(a => a.id === adjId) : null;
+
+                            return (
+                              <View key={item.id} className={classnames(styles.tlItem, styles[item.type])}>
+                                <View className={styles.tlDot} />
+                                <View className={styles.tlTime}>{item.timeLabel}</View>
+                                <View
+                                  className={styles.tlContent}
+                                  onClick={() => {
+                                    if (isAdjustment) {
+                                      setExpandedAdjustmentId(isExpanded ? null : adjId);
+                                      Taro.vibrateShort({ type: 'light' });
+                                    }
+                                  }}
+                                >
+                                  <View className={styles.tlTitleRow}>
+                                    <Text className={styles.tlIcon}>{item.icon}</Text>
+                                    <Text className={styles.tlTitle}>{item.title}</Text>
+                                    {item.tag && (
+                                      <Text
+                                        className={styles.tlTag}
+                                        style={{ background: (item.tagColor || '#64748B') + '22', color: item.tagColor || '#64748B' }}
+                                      >
+                                        {item.tag}
+                                      </Text>
+                                    )}
+                                    {isAdjustment && (
+                                      <Text className={styles.tlExpand}>
+                                        {isExpanded ? '▲' : '▼'}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  {item.description && (
+                                    <Text className={styles.tlDesc}>{item.description}</Text>
+                                  )}
+
+                                  {isAdjustment && isExpanded && adj && (
+                                    <View className={styles.tlAdjustDetail}>
+                                      <View className={styles.tladSection}>
+                                        <Text className={styles.tladTitle}>📅 受影响的日期</Text>
+                                        <View className={styles.tladDates}>
+                                          {[...new Set(adj.affectedDateKeys)].sort().map(dk => (
+                                            <Text key={dk} className={styles.tladDateTag}>
+                                              {dk.slice(5)}
+                                            </Text>
+                                          ))}
+                                        </View>
+                                      </View>
+
+                                      {adj.removedReminders.length > 0 && (
+                                        <View className={styles.tladSection}>
+                                          <Text className={styles.tladTitle}>❌ 原安排（已移除）</Text>
+                                          {adj.removedReminders.map(r => (
+                                            <View key={r.id} className={styles.tladItem}>
+                                              <View className={styles.tladItemDate}>{r.date.slice(5)}</View>
+                                              <View className={styles.tladItemContent}>
+                                                <Text className={classnames(styles.tladItemTag, styles[r.type])}>
+                                                  {REM_TEXT[r.type]}
+                                                </Text>
+                                                <Text className={styles.tladItemTitle}>{r.title}</Text>
+                                              </View>
+                                            </View>
+                                          ))}
+                                        </View>
+                                      )}
+
+                                      {adj.addedReminders.length > 0 && (
+                                        <View className={styles.tladSection}>
+                                          <Text className={styles.tladTitle}>✅ 新安排（已替换）</Text>
+                                          {adj.addedReminders.map(r => (
+                                            <View key={r.id} className={styles.tladItem}>
+                                              <View className={styles.tladItemDate}>{r.date.slice(5)}</View>
+                                              <View className={styles.tladItemContent}>
+                                                <Text className={classnames(styles.tladItemTag, styles[r.type])}>
+                                                  {REM_TEXT[r.type]}
+                                                </Text>
+                                                <Text className={styles.tladItemTitle}>{r.title}</Text>
+                                              </View>
+                                            </View>
+                                          ))}
+                                        </View>
+                                      )}
+
+                                      {adj.detailedReasons.length > 0 && (
+                                        <View className={styles.tladSection}>
+                                          <Text className={styles.tladTitle}>🔍 调整依据</Text>
+                                          {adj.detailedReasons.map((r, i) => (
+                                            <Text key={i} className={styles.tladReason}>
+                                              • {r}
+                                            </Text>
+                                          ))}
+                                        </View>
+                                      )}
+                                    </View>
                                   )}
                                 </View>
-                                {item.description && (
-                                  <Text className={styles.tlDesc}>{item.description}</Text>
-                                )}
                               </View>
-                            </View>
-                          ))}
+                            );
+                          })}
                         </View>
                       ) : (
                         <View className={styles.tlEmpty}>
@@ -711,8 +1134,10 @@ const ProfilePage: React.FC = () => {
               <Text className={styles.cardFooterText}>坚持就是胜利 · 下周继续加油 💪</Text>
             </View>
 
-            <View className={styles.cardExportHint}>
-              <Text>💡 截图保存本卡片，分享到朋友圈</Text>
+            <View className={styles.cardExportRow}>
+              <Button className={styles.cardExportBtn} onClick={exportWeeklyCard}>
+                � 导出分享周报
+              </Button>
             </View>
           </View>
         )}
@@ -1171,6 +1596,12 @@ const ProfilePage: React.FC = () => {
           </View>
         </View>
       )}
+
+      <Canvas
+        canvasId="weeklyCardCanvas"
+        id="weeklyCardCanvas"
+        style={{ width: '750px', height: '1334px', position: 'fixed', left: '-9999px', top: '-9999px' }}
+      />
     </ScrollView>
   );
 };

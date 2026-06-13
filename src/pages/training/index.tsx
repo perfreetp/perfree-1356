@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Button, ScrollView } from '@tarojs/components';
+import { View, Text, Button, ScrollView, Input, Slider } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -10,6 +10,13 @@ import { PlanType, ReminderType, DayScheduleItem, TrainingRecord, SportType } fr
 
 type PlanTab = PlanType;
 type ViewMode = 'list' | 'calendar';
+type ModalType = 'training' | 'editTraining' | null;
+
+const SPORT_OPTIONS: { key: SportType; name: string; icon: string }[] = [
+  { key: 'running', name: '跑步', icon: '🏃' },
+  { key: 'ball', name: '球类', icon: '⚽' },
+  { key: 'fitness', name: '健身', icon: '💪' }
+];
 
 const TABS: { key: PlanTab; name: string; icon: string }[] = [
   { key: 'rest', name: '休息建议', icon: '😴' },
@@ -66,6 +73,33 @@ const TrainingPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [selectedDateKey, setSelectedDateKey] = useState<string>(today);
+
+  // 训练编辑弹窗
+  const [modal, setModal] = useState<ModalType>(null);
+  const [editingRecord, setEditingRecord] = useState<TrainingRecord | null>(null);
+  const [editPatch, setEditPatch] = useState<Partial<TrainingRecord> & { dateKey?: string }>({});
+  const [newTraining, setNewTraining] = useState({
+    sportType: 'running' as SportType,
+    duration: 45,
+    intensity: 3,
+    sets: 0,
+    note: '',
+    completed: true,
+    dateKey: today
+  });
+
+  const quickDates = useMemo(() => {
+    const result: { key: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = -6; i <= 0; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().split('T')[0];
+      const label = i === 0 ? '今天' : i === -1 ? '昨天' : `${d.getMonth() + 1}/${d.getDate()}`;
+      result.push({ key, label });
+    }
+    return result;
+  }, []);
 
   const {
     reminders,
@@ -271,61 +305,61 @@ const TrainingPage: React.FC = () => {
   };
 
   const handleAddTrainingToDate = (dateKey: string) => {
-    const sportOptions = [
-      { key: 'running', name: '🏃 跑步训练' },
-      { key: 'ball', name: '⚽ 球类训练' },
-      { key: 'fitness', name: '💪 健身力量' }
-    ];
-    Taro.showActionSheet({
-      itemList: sportOptions.map(o => o.name),
-      success: (res) => {
-        const sportType = sportOptions[res.tapIndex].key as SportType;
-        Taro.showModal({
-          title: '新增训练记录',
-          editable: true,
-          placeholderText: '请输入训练时长（分钟）',
-          confirmText: '添加',
-          success: (mRes) => {
-            if (mRes.confirm) {
-              const mins = parseInt(mRes.content || '30', 10);
-              if (isNaN(mins) || mins <= 0) {
-                Taro.showToast({ title: '请输入有效时长', icon: 'none' });
-                return;
-              }
-              addTrainingRecord({
-                sportType,
-                duration: mins,
-                intensity: 3,
-                completed: true,
-                dateKey
-              });
-              Taro.showToast({ title: '已记录', icon: 'success' });
-              Taro.vibrateShort({ type: 'light' });
-            }
-          }
-        });
-      }
+    setNewTraining({
+      ...newTraining,
+      dateKey
     });
+    setModal('training');
   };
 
   const handleEditTraining = (record: TrainingRecord) => {
-    Taro.showModal({
-      title: '编辑训练时长',
-      editable: true,
-      placeholderText: '请输入训练时长（分钟）',
-      content: String(record.duration),
-      confirmText: '保存',
-      success: (res) => {
-        if (res.confirm) {
-          const mins = parseInt(res.content || '30', 10);
-          if (isNaN(mins) || mins <= 0) {
-            Taro.showToast({ title: '请输入有效时长', icon: 'none' });
-            return;
-          }
-          updateTrainingRecord(record.id, { duration: mins });
-          Taro.showToast({ title: '已更新', icon: 'success' });
-        }
-      }
+    setEditingRecord(record);
+    setEditPatch({});
+    setModal('editTraining');
+  };
+
+  const saveEditTraining = () => {
+    if (!editingRecord) return;
+    const patch: Partial<TrainingRecord> & { dateKey?: string } = {};
+    if (editPatch.sportType !== undefined) patch.sportType = editPatch.sportType;
+    if (editPatch.duration !== undefined) patch.duration = editPatch.duration;
+    if (editPatch.intensity !== undefined) patch.intensity = editPatch.intensity;
+    if (editPatch.sets !== undefined) patch.sets = editPatch.sets;
+    if (editPatch.note !== undefined) patch.note = editPatch.note;
+    if (editPatch.completed !== undefined) patch.completed = editPatch.completed;
+    if (editPatch.dateKey !== undefined) patch.dateKey = editPatch.dateKey;
+
+    if (Object.keys(patch).length > 0) {
+      updateTrainingRecord(editingRecord.id, patch);
+      Taro.showToast({ title: '已更新', icon: 'success' });
+      Taro.vibrateShort({ type: 'medium' });
+    }
+    setModal(null);
+    setEditingRecord(null);
+    setEditPatch({});
+  };
+
+  const saveNewTraining = () => {
+    addTrainingRecord({
+      sportType: newTraining.sportType,
+      duration: newTraining.duration,
+      intensity: newTraining.intensity,
+      sets: newTraining.sets,
+      note: newTraining.note,
+      completed: newTraining.completed,
+      dateKey: newTraining.dateKey
+    });
+    Taro.showToast({ title: '已记录', icon: 'success' });
+    Taro.vibrateShort({ type: 'medium' });
+    setModal(null);
+    setNewTraining({
+      sportType: 'running',
+      duration: 45,
+      intensity: 3,
+      sets: 0,
+      note: '',
+      completed: true,
+      dateKey: today
     });
   };
 
@@ -363,15 +397,15 @@ const TrainingPage: React.FC = () => {
     });
   };
 
-  const handleCancelPlan = (originPlanId: string, title: string) => {
+  const handleCancelPlan = (scheduleGroupId: string, title: string) => {
     Taro.showModal({
-      title: '取消整个方案日程',
-      content: `将删除与「${title}」相关的所有未完成提醒（包含连续多天）。确认？`,
+      title: '取消本组方案日程',
+      content: `将删除「${title}」本组方案中所有未完成提醒，不影响其他同类型方案安排。确认？`,
       confirmText: '确认取消',
       confirmColor: '#EF4444',
       success: (res) => {
         if (res.confirm) {
-          const n = cancelPlanSchedule(originPlanId);
+          const n = cancelPlanSchedule(scheduleGroupId);
           Taro.showToast({ title: `已移除${n}条安排`, icon: 'success' });
         }
       }
@@ -658,16 +692,16 @@ const TrainingPage: React.FC = () => {
                     >
                       📅 改日期
                     </Button>
-                    {r.originPlanId && !r.done && (
+                    {r.scheduleGroupId && !r.done && (
                       <Button
                         className={styles.reminderActionBtn}
                         onClick={(e) => {
                           e.stopPropagation && e.stopPropagation();
                           const plan = TRAINING_PLANS.find(p => p.id === r.originPlanId);
-                          handleCancelPlan(r.originPlanId!, plan ? plan.title : r.title);
+                          handleCancelPlan(r.scheduleGroupId!, plan ? plan.title : r.title);
                         }}
                       >
-                        ⛔ 取消整方案
+                        ⛔ 取消本组
                       </Button>
                     )}
                     <Button
@@ -1034,6 +1068,210 @@ const TrainingPage: React.FC = () => {
           📞 紧急呼叫 120
         </Button>
       </View>
+
+      {/* 训练编辑弹窗 */}
+      {(modal === 'training' || modal === 'editTraining') && (
+        <View className={styles.modalMask} onClick={() => setModal(null)}>
+          <View className={styles.modalContent} onClick={e => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>
+                {modal === 'editTraining' ? '编辑训练记录' : '新增训练记录'}
+              </Text>
+              <View className={styles.modalClose} onClick={() => setModal(null)}>×</View>
+            </View>
+
+            {/* 日期选择 */}
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>选择日期</Text>
+              <View className={styles.datePickerRow}>
+                {quickDates.map(d => (
+                  <View key={d.key}
+                    className={classnames(styles.dateQuickTag, {
+                      [styles.selected]: (modal === 'editTraining'
+                        ? (editPatch.dateKey ?? editingRecord?.date)
+                        : newTraining.dateKey) === d.key
+                    })}
+                    onClick={() => {
+                      if (modal === 'editTraining') {
+                        setEditPatch({ ...editPatch, dateKey: d.key });
+                      } else {
+                        setNewTraining({ ...newTraining, dateKey: d.key });
+                      }
+                      Taro.vibrateShort({ type: 'light' });
+                    }}
+                  >
+                    {d.label}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* 类型 */}
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>运动类型</Text>
+              <View className={styles.optionGroup}>
+                {SPORT_OPTIONS.map(o => {
+                  const val = modal === 'editTraining'
+                    ? (editPatch.sportType ?? editingRecord?.sportType)
+                    : newTraining.sportType;
+                  return (
+                    <View key={o.key}
+                      className={classnames(styles.optionItem, { [styles.selected]: val === o.key })}
+                      onClick={() => {
+                        if (modal === 'editTraining') {
+                          setEditPatch({ ...editPatch, sportType: o.key });
+                        } else {
+                          setNewTraining({ ...newTraining, sportType: o.key });
+                        }
+                      }}
+                    >{o.icon} {o.name}</View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 时长 */}
+            <View className={styles.formGroup}>
+              <View className={styles.sliderRow}>
+                <Text className={styles.formLabel} style={{ margin: 0 }}>训练时长</Text>
+                <Text className={styles.sliderValue}>
+                  {modal === 'editTraining'
+                    ? (editPatch.duration ?? editingRecord?.duration ?? 45)
+                    : newTraining.duration} 分钟
+                  <Text style={{ fontSize: 22, fontWeight: 400, color: '#64748B' }}>
+                    （约{Math.round(((modal === 'editTraining'
+                      ? (editPatch.duration ?? editingRecord?.duration ?? 45)
+                      : newTraining.duration) / 60) * 10) / 10} 小时）
+                  </Text>
+                </Text>
+              </View>
+              <Slider min={10} max={180} step={5}
+                value={modal === 'editTraining'
+                  ? (editPatch.duration ?? editingRecord?.duration ?? 45)
+                  : newTraining.duration}
+                activeColor="#3B82F6" blockColor="#3B82F6" blockSize={28}
+                onChange={e => {
+                  if (modal === 'editTraining') {
+                    setEditPatch({ ...editPatch, duration: e.detail.value });
+                  } else {
+                    setNewTraining({ ...newTraining, duration: e.detail.value });
+                  }
+                }} />
+            </View>
+
+            {/* 强度 */}
+            <View className={styles.formGroup}>
+              <View className={styles.sliderRow}>
+                <Text className={styles.formLabel} style={{ margin: 0 }}>训练强度</Text>
+                <Text className={styles.sliderValue}>
+                  {(modal === 'editTraining'
+                    ? (editPatch.intensity ?? editingRecord?.intensity ?? 3)
+                    : newTraining.intensity)}/5
+                  <Text style={{ fontSize: 22, fontWeight: 400, color: '#64748B' }}>
+                    （{['', '轻松', '较低', '中等', '较高', '极限'][modal === 'editTraining'
+                      ? (editPatch.intensity ?? editingRecord?.intensity ?? 3)
+                      : newTraining.intensity]}）
+                  </Text>
+                </Text>
+              </View>
+              <Slider min={1} max={5} step={1}
+                value={modal === 'editTraining'
+                  ? (editPatch.intensity ?? editingRecord?.intensity ?? 3)
+                  : newTraining.intensity}
+                activeColor={[0, '', '#10B981', '#10B981', '#F59E0B', '#EF4444'][modal === 'editTraining'
+                  ? (editPatch.intensity ?? editingRecord?.intensity ?? 3)
+                  : newTraining.intensity]}
+                blockColor={[0, '', '#10B981', '#10B981', '#F59E0B', '#EF4444'][modal === 'editTraining'
+                  ? (editPatch.intensity ?? editingRecord?.intensity ?? 3)
+                  : newTraining.intensity]}
+                blockSize={28}
+                onChange={e => {
+                  if (modal === 'editTraining') {
+                    setEditPatch({ ...editPatch, intensity: e.detail.value });
+                  } else {
+                    setNewTraining({ ...newTraining, intensity: e.detail.value });
+                  }
+                }} />
+            </View>
+
+            {/* 组数 */}
+            <View className={styles.formGroup}>
+              <View className={styles.sliderRow}>
+                <Text className={styles.formLabel} style={{ margin: 0 }}>训练组数（可选）</Text>
+                <Text className={styles.sliderValue}>
+                  {modal === 'editTraining'
+                    ? (editPatch.sets ?? editingRecord?.sets ?? 0)
+                    : newTraining.sets} 组
+                </Text>
+              </View>
+              <Slider min={0} max={20} step={1}
+                value={modal === 'editTraining'
+                  ? (editPatch.sets ?? editingRecord?.sets ?? 0)
+                  : newTraining.sets}
+                activeColor="#8B5CF6" blockColor="#8B5CF6" blockSize={24}
+                onChange={e => {
+                  if (modal === 'editTraining') {
+                    setEditPatch({ ...editPatch, sets: e.detail.value });
+                  } else {
+                    setNewTraining({ ...newTraining, sets: e.detail.value });
+                  }
+                }} />
+            </View>
+
+            {/* 备注 */}
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>备注（可选）</Text>
+              <Input className={styles.formInput}
+                value={modal === 'editTraining'
+                  ? (editPatch.note ?? editingRecord?.note ?? '')
+                  : newTraining.note}
+                onInput={e => {
+                  if (modal === 'editTraining') {
+                    setEditPatch({ ...editPatch, note: e.detail.value });
+                  } else {
+                    setNewTraining({ ...newTraining, note: e.detail.value });
+                  }
+                }}
+                placeholder="如：5公里配速5:30、肩推30kg等" maxlength={30} />
+            </View>
+
+            {/* 状态 */}
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>状态</Text>
+              <View className={styles.optionGroup}>
+                {[
+                  { k: true, n: '✅ 已完成' },
+                  { k: false, n: '⏳ 计划中' }
+                ].map(o => {
+                  const val = modal === 'editTraining'
+                    ? (editPatch.completed ?? editingRecord?.completed ?? true)
+                    : newTraining.completed;
+                  return (
+                    <View key={String(o.k)}
+                      className={classnames(styles.optionItem, { [styles.selected]: val === o.k })}
+                      onClick={() => {
+                        if (modal === 'editTraining') {
+                          setEditPatch({ ...editPatch, completed: o.k });
+                        } else {
+                          setNewTraining({ ...newTraining, completed: o.k });
+                        }
+                      }}
+                    >{o.n}</View>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View className={styles.modalBtnRow}>
+              <Button className={classnames(styles.modalBtn, styles.secondary)} onClick={() => setModal(null)}>取消</Button>
+              <Button className={classnames(styles.modalBtn, styles.primary)}
+                onClick={modal === 'editTraining' ? saveEditTraining : saveNewTraining}>
+                {modal === 'editTraining' ? '保存修改' : '保存记录'}
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };

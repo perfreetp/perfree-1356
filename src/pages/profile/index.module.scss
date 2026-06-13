@@ -1297,3 +1297,121 @@
   color: $color-text-tertiary;
 }
 
+.tlExpand {
+  font-size: 20rpx;
+  color: #8B5CF6;
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.tlAdjustDetail {
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1rpx dashed #EDE9FE;
+}
+
+.tladSection {
+  margin-bottom: $spacing-sm;
+}
+
+.tladTitle {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #5B21B6;
+  margin-bottom: 8rpx;
+  display: block;
+}
+
+.tladDates {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+
+.tladDateTag {
+  padding: 4rpx 16rpx;
+  background: #F5F3FF;
+  color: #7C3AED;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.tladItem {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx solid #F3F4F6;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.tladItemDate {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  font-weight: 600;
+  flex-shrink: 0;
+  width: 70rpx;
+}
+
+.tladItemContent {
+  flex: 1;
+}
+
+.tladItemTag {
+  display: inline-block;
+  padding: 2rpx 12rpx;
+  border-radius: 12rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  margin-right: 8rpx;
+  background: #F3F4F6;
+  color: #64748B;
+
+  &.rest { background: #FEF2F2; color: #DC2626; }
+  &.alternative { background: #FFFBEB; color: #D97706; }
+  &.recovery { background: #F0FDF4; color: #059669; }
+  &.training { background: #EFF6FF; color: #2563EB; }
+  &.check { background: #FAF5FF; color: #9333EA; }
+}
+
+.tladItemTitle {
+  font-size: 24rpx;
+  color: $color-text-primary;
+  font-weight: 500;
+  display: block;
+  margin-top: 4rpx;
+}
+
+.tladReason {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.cardExportRow {
+  padding: $spacing-md 0 0;
+  display: flex;
+  justify-content: center;
+}
+
+.cardExportBtn {
+  width: 420rpx;
+  height: 80rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 4rpx 16rpx rgba(99, 102, 241, 0.3);
+
+  &::after {
+    border: none;
+  }
+}
+

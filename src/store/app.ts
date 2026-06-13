@@ -45,9 +45,9 @@ interface AppState {
   updateReminder: (id: string, patch: Partial<ReminderItem>) => void;
   moveReminderSchedule: (id: string, dateOffset: number) => { success: boolean; newDate: string } | null;
   deleteReminder: (id: string) => void;
-  cancelPlanSchedule: (originPlanId: string) => number;
+  cancelPlanSchedule: (scheduleGroupId: string) => number;
 
-  addPlanWithSchedule: (planId: string, startDateKey?: string, overrideDays?: number) => { created: number; days: number };
+  addPlanWithSchedule: (planId: string, startDateKey?: string, overrideDays?: number) => { created: number; days: number; groupId: string };
   refreshPlanSchedulesByState: (triggerSource?: 'assessment' | 'pain' | 'manual') => {
     updated: number;
     removed: number;
@@ -245,11 +245,11 @@ export const useAppStore = create<AppState>()(
         reminders: s.reminders.filter(r => r.id !== id)
       })),
 
-      cancelPlanSchedule: (originPlanId) => {
+      cancelPlanSchedule: (scheduleGroupId) => {
         let removed = 0;
         set((s) => {
           const before = s.reminders.length;
-          const reminders = s.reminders.filter(r => r.originPlanId !== originPlanId || r.done);
+          const reminders = s.reminders.filter(r => r.scheduleGroupId !== scheduleGroupId || r.done);
           removed = before - reminders.length;
           return { reminders };
         });
@@ -263,6 +263,7 @@ export const useAppStore = create<AppState>()(
         const startKey = startDateKey || getDateKey(Date.now());
         const planType = plan.type;
         const reminderType = PLAN_TYPE_TO_REMINDER_TYPE[planType];
+        const groupId = generateId();
 
         const created: ReminderItem[] = [];
         for (let i = 0; i < days; i++) {
@@ -290,13 +291,14 @@ export const useAppStore = create<AppState>()(
             planType,
             done: false,
             originPlanId: plan.id,
+            scheduleGroupId: groupId,
             scheduleStartDate: startKey,
             scheduleDayIndex: i,
             scheduleTotalDays: days
           });
         }
         set((s) => ({ reminders: [...s.reminders, ...created] }));
-        return { created: created.length, days };
+        return { created: created.length, days, groupId };
       },
 
       refreshPlanSchedulesByState: (triggerSource = 'manual') => {
@@ -316,9 +318,9 @@ export const useAppStore = create<AppState>()(
 
         const todayKey = getDateKey(Date.now());
 
-        const activePlanIds = new Set<string>();
+        const activeGroupIds = new Set<string>();
         reminders.forEach(r => {
-          if (r.originPlanId && !r.done) activePlanIds.add(r.originPlanId);
+          if (r.scheduleGroupId && !r.done) activeGroupIds.add(r.scheduleGroupId);
         });
 
         const smartRecs = getSmartRecommendations();
@@ -327,17 +329,20 @@ export const useAppStore = create<AppState>()(
 
         let newReminders = [...reminders];
 
-        const processedPlans = new Set<string>();
+        const processedGroups = new Set<string>();
 
-        activePlanIds.forEach(planId => {
-          if (processedPlans.has(planId)) return;
-          processedPlans.add(planId);
+        activeGroupIds.forEach(groupId => {
+          if (processedGroups.has(groupId)) return;
+          processedGroups.add(groupId);
 
-          const plan = TRAINING_PLANS.find(p => p.id === planId);
+          const groupReminders = newReminders.filter(r => r.scheduleGroupId === groupId);
+          if (groupReminders.length === 0) return;
+
+          const planId = groupReminders[0].originPlanId;
+          const plan = planId ? TRAINING_PLANS.find(p => p.id === planId) : null;
           if (!plan) return;
 
-          const planReminders = newReminders.filter(r => r.originPlanId === planId);
-          const undoneReminders = planReminders.filter(r => !r.done);
+          const undoneReminders = groupReminders.filter(r => !r.done);
           if (undoneReminders.length === 0) return;
 
           const currentRec = recMap[planId];
@@ -404,6 +409,7 @@ export const useAppStore = create<AppState>()(
               planType: newPlan.type,
               done: false,
               originPlanId: newPlan.id,
+              scheduleGroupId: groupId,
               scheduleStartDate: newStartKey,
               scheduleDayIndex: i,
               scheduleTotalDays: newDays,
@@ -447,7 +453,21 @@ export const useAppStore = create<AppState>()(
             addedReminderIds: addedIds,
             removedReminderIds: removedIds,
             updatedReminderIds: updatedIds,
-            affectedDateKeys: [...new Set(affectedDateKeys)]
+            affectedDateKeys: [...new Set(affectedDateKeys)],
+            removedReminders: todayAndAfter.map(r => ({
+              id: r.id,
+              date: r.date,
+              title: r.title,
+              type: r.type,
+              description: r.description
+            })),
+            addedReminders: newRemindersForPlan.map(r => ({
+              id: r.id,
+              date: r.date,
+              title: r.title,
+              type: r.type,
+              description: r.description
+            }))
           };
 
           newReminders = newReminders.filter(r => !removedIds.includes(r.id));
@@ -491,7 +511,17 @@ export const useAppStore = create<AppState>()(
               addedReminderIds: [],
               removedReminderIds: removeIds,
               updatedReminderIds: [],
-              affectedDateKeys
+              affectedDateKeys,
+              removedReminders: newReminders
+                .filter(r => removeIds.includes(r.id))
+                .map(r => ({
+                  id: r.id,
+                  date: r.date,
+                  title: r.title,
+                  type: r.type,
+                  description: r.description
+                })),
+              addedReminders: []
             };
             newAdjustments.push(adjustment);
             totalRemoved += removeIds.length;

@@ -1028,3 +1028,173 @@
     box-shadow: 0 6rpx 20rpx rgba(59, 130, 246, 0.35);
   }
 }
+
+/* 弹窗遮罩 */
+.modalMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: $spacing-lg;
+}
+
+.modalContent {
+  width: 100%;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: $radius-xl;
+  overflow-y: auto;
+  padding: $spacing-xl;
+  box-shadow: 0 20rpx 60rpx rgba(0,0,0,0.3);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+}
+
+.modalTitle {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: $color-text-primary;
+}
+
+.modalClose {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  color: $color-text-tertiary;
+  border-radius: $radius-round;
+  background: $color-divider;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.formGroup {
+  margin-bottom: $spacing-md;
+}
+
+.formLabel {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.datePickerRow {
+  display: flex;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-xs;
+}
+
+.dateQuickTag {
+  padding: 10rpx 24rpx;
+  border-radius: $radius-button;
+  background: $color-divider;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  font-weight: 500;
+  transition: all 0.15s;
+
+  &.selected {
+    background: $color-primary;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.smallHint {
+  font-size: 22rpx;
+  color: $color-text-tertiary;
+  line-height: 1.5;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.sliderValue {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $color-primary;
+}
+
+.optionGroup {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.optionItem {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-button;
+  background: $color-divider;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  font-weight: 500;
+  transition: all 0.15s;
+
+  &.selected {
+    background: $color-primary-50;
+    color: $color-primary-dark;
+    font-weight: 600;
+    border: 2rpx solid $color-primary;
+  }
+}
+
+.formInput {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-md;
+  background: $color-divider;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.modalBtnRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.modalBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: 600;
+  transition: all 0.15s;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  &.secondary {
+    background: $color-divider;
+    color: $color-text-secondary;
+  }
+
+  &.primary {
+    background: $color-primary;
+    color: #fff;
+  }
+}

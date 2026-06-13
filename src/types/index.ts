@@ -59,6 +59,7 @@ export interface ReminderItem {
   done: boolean;
   completedAt?: number;
   originPlanId?: string;
+  scheduleGroupId?: string;
   scheduleStartDate?: string;
   scheduleDayIndex?: number;
   scheduleTotalDays?: number;
@@ -155,6 +156,14 @@ export interface DayScheduleItem {
 
 export type AdjustmentType = 'upgrade' | 'downgrade' | 'cancel' | 'extend' | 'switch';
 
+export interface AdjustmentReminderSnapshot {
+  id: string;
+  date: string;
+  title: string;
+  type: ReminderType;
+  description?: string;
+}
+
 export interface ScheduleAdjustment {
   id: string;
   timestamp: number;
@@ -171,6 +180,8 @@ export interface ScheduleAdjustment {
   removedReminderIds: string[];
   updatedReminderIds: string[];
   affectedDateKeys: string[];
+  removedReminders: AdjustmentReminderSnapshot[];
+  addedReminders: AdjustmentReminderSnapshot[];
 }
 
 export type NextWeekStrategy = 'taper' | 'maintain' | 'recovery' | 'advance' | 'rest';
