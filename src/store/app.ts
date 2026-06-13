@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   RiskAssessment, PainRecord, UserProfile, WeeklyTrend, ReminderItem,
-  TrainingRecord, SmartRecommendation, BodyPart, RiskLevel, DayScheduleItem, PlanType, ReminderType
+  TrainingRecord, SmartRecommendation, BodyPart, RiskLevel, DayScheduleItem,
+  PlanType, ReminderType, ScheduleAdjustment, NextWeekRecommendation,
+  NextWeekStrategy, AdjustmentType, TimelineItem
 } from '@/types';
-import { generateId } from '@/utils/risk';
+import { generateId, getRiskLevelText, BODY_PART_NAMES } from '@/utils/risk';
 import { TRAINING_PLANS } from '@/data/training';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -26,6 +28,7 @@ interface AppState {
   painRecords: PainRecord[];
   reminders: ReminderItem[];
   trainingRecords: TrainingRecord[];
+  scheduleAdjustments: ScheduleAdjustment[];
   userProfile: UserProfile;
 
   addAssessment: (a: Omit<RiskAssessment, 'id' | 'timestamp'>) => void;
@@ -39,12 +42,18 @@ interface AppState {
   addReminder: (r: Omit<ReminderItem, 'id' | 'done'>) => void;
   toggleReminder: (id: string) => void;
   updateReminderDate: (id: string, newDate: string) => void;
-  moveReminderSchedule: (id: string, dateOffset: number) => void;
+  updateReminder: (id: string, patch: Partial<ReminderItem>) => void;
+  moveReminderSchedule: (id: string, dateOffset: number) => { success: boolean; newDate: string } | null;
   deleteReminder: (id: string) => void;
-  cancelPlanSchedule: (originPlanId: string) => void;
+  cancelPlanSchedule: (originPlanId: string) => number;
 
   addPlanWithSchedule: (planId: string, startDateKey?: string, overrideDays?: number) => { created: number; days: number };
-  refreshPlanSchedulesByState: () => { updated: number; removed: number };
+  refreshPlanSchedulesByState: (triggerSource?: 'assessment' | 'pain' | 'manual') => {
+    updated: number;
+    removed: number;
+    added: number;
+    adjustments: ScheduleAdjustment[];
+  };
 
   updateProfile: (p: Partial<UserProfile>) => void;
 
@@ -67,6 +76,10 @@ interface AppState {
   getDaySchedule: (dateKey: string) => DayScheduleItem;
   getWeeklySchedule: (weekOffset?: number) => DayScheduleItem[];
   getWeekRange: (weekOffset: number) => { startKey: string; endKey: string; label: string };
+  getScheduleAdjustments: (weekOffset?: number) => ScheduleAdjustment[];
+  getWeeklyTimeline: (weekOffset?: number) => TimelineItem[];
+  getNextWeekRecommendation: () => NextWeekRecommendation | null;
+  applyNextWeekRecommendation: () => { created: number; days: number; planCount: number } | null;
 }
 
 const defaultProfile: UserProfile = {
@@ -125,6 +138,7 @@ export const useAppStore = create<AppState>()(
       painRecords: [],
       reminders: defaultReminders,
       trainingRecords: [],
+      scheduleAdjustments: [],
       userProfile: defaultProfile,
 
       getWeekRange: (weekOffset) => {
@@ -147,12 +161,12 @@ export const useAppStore = create<AppState>()(
 
       addAssessment: (a) => {
         set((s) => ({ assessments: [{ ...a, id: generateId(), timestamp: Date.now() }, ...s.assessments] }));
-        setTimeout(() => get().refreshPlanSchedulesByState(), 0);
+        setTimeout(() => get().refreshPlanSchedulesByState('assessment'), 0);
       },
 
       addPainRecord: (r) => {
         set((s) => ({ painRecords: [{ ...r, id: generateId(), timestamp: Date.now() }, ...s.painRecords] }));
-        setTimeout(() => get().refreshPlanSchedulesByState(), 0);
+        setTimeout(() => get().refreshPlanSchedulesByState('pain'), 0);
       },
 
       addTrainingRecord: (r) => {
@@ -210,21 +224,37 @@ export const useAppStore = create<AppState>()(
         )
       })),
 
-      moveReminderSchedule: (id, dateOffset) => set((s) => ({
-        reminders: s.reminders.map(r => {
-          if (r.id !== id) return r;
-          const newDate = addDaysToDateKey(r.date, dateOffset);
-          return { ...r, date: newDate };
-        })
+      updateReminder: (id, patch) => set((s) => ({
+        reminders: s.reminders.map(r => r.id === id ? { ...r, ...patch } : r)
       })),
+
+      moveReminderSchedule: (id, dateOffset) => {
+        let newDate = '';
+        set((s) => {
+          const updated = s.reminders.map(r => {
+            if (r.id !== id) return r;
+            newDate = addDaysToDateKey(r.date, dateOffset);
+            return { ...r, date: newDate };
+          });
+          return { reminders: updated };
+        });
+        return newDate ? { success: true, newDate } : null;
+      },
 
       deleteReminder: (id) => set((s) => ({
         reminders: s.reminders.filter(r => r.id !== id)
       })),
 
-      cancelPlanSchedule: (originPlanId) => set((s) => ({
-        reminders: s.reminders.filter(r => r.originPlanId !== originPlanId || r.done)
-      })),
+      cancelPlanSchedule: (originPlanId) => {
+        let removed = 0;
+        set((s) => {
+          const before = s.reminders.length;
+          const reminders = s.reminders.filter(r => r.originPlanId !== originPlanId || r.done);
+          removed = before - reminders.length;
+          return { reminders };
+        });
+        return removed;
+      },
 
       addPlanWithSchedule: (planId, startDateKey, overrideDays) => {
         const plan = TRAINING_PLANS.find(p => p.id === planId);
@@ -269,34 +299,218 @@ export const useAppStore = create<AppState>()(
         return { created: created.length, days };
       },
 
-      refreshPlanSchedulesByState: () => {
-        const { getLatestRiskLevel, getLatestPainfulParts, reminders } = get();
-        const risk = getLatestRiskLevel();
-        const pains = getLatestPainfulParts();
-        let updated = 0;
-        let removed = 0;
-        const planCoverage: Record<string, { covered: boolean; planType: PlanType }> = {};
+      refreshPlanSchedulesByState: (triggerSource = 'manual') => {
+        const {
+          getLatestRiskLevel, getLatestPainfulParts, reminders, scheduleAdjustments,
+          getSmartRecommendations, getDaySchedule
+        } = get();
+
+        const beforeRisk = getLatestRiskLevel();
+        const beforePains = getLatestPainfulParts();
+        const beforePainCount = beforePains.length;
+
+        const newAdjustments: ScheduleAdjustment[] = [];
+        let totalAdded = 0;
+        let totalRemoved = 0;
+        let totalUpdated = 0;
+
+        const todayKey = getDateKey(Date.now());
+
+        const activePlanIds = new Set<string>();
         reminders.forEach(r => {
-          if (r.originPlanId) {
-            const p = TRAINING_PLANS.find(pp => pp.id === r.originPlanId);
-            if (p) planCoverage[r.originPlanId] = { covered: true, planType: p.type };
-          }
+          if (r.originPlanId && !r.done) activePlanIds.add(r.originPlanId);
         });
-        if (risk === 'low' && pains.length === 0) {
+
+        const smartRecs = getSmartRecommendations();
+        const recMap: Record<string, SmartRecommendation> = {};
+        smartRecs.forEach(r => { recMap[r.planId] = r; });
+
+        let newReminders = [...reminders];
+
+        const processedPlans = new Set<string>();
+
+        activePlanIds.forEach(planId => {
+          if (processedPlans.has(planId)) return;
+          processedPlans.add(planId);
+
+          const plan = TRAINING_PLANS.find(p => p.id === planId);
+          if (!plan) return;
+
+          const planReminders = newReminders.filter(r => r.originPlanId === planId);
+          const undoneReminders = planReminders.filter(r => !r.done);
+          if (undoneReminders.length === 0) return;
+
+          const currentRec = recMap[planId];
+          const currentScore = currentRec?.matchScore || 0;
+
+          let bestAlt: SmartRecommendation | null = null;
+          for (const rec of smartRecs) {
+            if (rec.planId === planId) continue;
+            if (rec.matchScore - currentScore >= 25) {
+              bestAlt = rec;
+              break;
+            }
+          }
+
+          if (!bestAlt) {
+            const riskOk = beforeRisk && plan.suitableRiskLevels.includes(beforeRisk);
+            if (!riskOk && beforeRisk && smartRecs.length > 0) {
+              bestAlt = smartRecs[0];
+            }
+          }
+
+          if (!bestAlt) return;
+
+          const newPlan = bestAlt.plan;
+          const adjustmentId = generateId();
+          const removedIds: string[] = [];
+          const addedIds: string[] = [];
+          const updatedIds: string[] = [];
+          const affectedDateKeys: string[] = [];
+
+          const todayAndAfter = undoneReminders.filter(r => r.date >= todayKey);
+          const futureMinDayIndex = Math.min(...todayAndAfter.map(r => r.scheduleDayIndex ?? 0));
+
+          const todayAndAfterCount = todayAndAfter.length;
+          if (todayAndAfterCount === 0) return;
+          if (todayAndAfterCount < 2 && beforeRisk !== 'high') return;
+
+          const newDays = Math.min(todayAndAfterCount, newPlan.defaultDurationDays);
+          const newStartKey = todayAndAfter[0].date;
+
+          const newRemindersForPlan: ReminderItem[] = [];
+          for (let i = 0; i < newDays; i++) {
+            const dk = addDaysToDateKey(newStartKey, i);
+            const isCheckDay = newDays >= 4 && i === newDays - 1;
+            let title: string;
+            let desc: string;
+            let type: ReminderType = PLAN_TYPE_TO_REMINDER_TYPE[newPlan.type];
+            if (isCheckDay) {
+              type = 'check';
+              title = `[${newPlan.title}] 阶段复查`;
+              desc = `${newPlan.scheduleNote}\n因状态调整，请完成疼痛记录+风险自测评估`;
+            } else {
+              const phase = Math.floor(i / Math.ceil(newDays / 3));
+              const phaseText = ['初期·制动消肿', '中期·功能恢复', '后期·强度回归'][phase] || '执行';
+              title = `D${i + 1}/${newDays} ${newPlan.title}`;
+              desc = `【${phaseText}】${newPlan.items[i % newPlan.items.length]}\n\n方案已根据状态自动调整`;
+            }
+            newRemindersForPlan.push({
+              id: generateId(),
+              date: dk,
+              title,
+              description: desc,
+              type,
+              planType: newPlan.type,
+              done: false,
+              originPlanId: newPlan.id,
+              scheduleStartDate: newStartKey,
+              scheduleDayIndex: i,
+              scheduleTotalDays: newDays,
+              lastAdjustmentId: adjustmentId,
+              originalTitle: plan.title
+            });
+            addedIds.push(newRemindersForPlan[i].id);
+            affectedDateKeys.push(dk);
+          }
+
+          todayAndAfter.forEach(r => {
+            removedIds.push(r.id);
+            if (!affectedDateKeys.includes(r.date)) affectedDateKeys.push(r.date);
+          });
+
+          const adjType: AdjustmentType =
+            (bestAlt.matchScore - currentScore) > 35 ? 'switch' :
+              newPlan.type === 'rest' && plan.type !== 'rest' ? 'downgrade' :
+                newPlan.type === 'recovery' && plan.type === 'alternative' ? 'upgrade' :
+                  newPlan.type === 'alternative' && plan.type === 'recovery' ? 'downgrade' :
+                    'switch';
+
+          const detailedReasons = [
+            ...(bestAlt.detailedReasons?.slice(0, 3) || []),
+            `原方案「${plan.title}」匹配度下降`,
+            `切换为「${newPlan.title}」更适合当前状态`
+          ];
+
+          const adjustment: ScheduleAdjustment = {
+            id: adjustmentId,
+            timestamp: Date.now(),
+            type: adjType,
+            reason: `根据最新${triggerSource === 'assessment' ? '风险自测' : '疼痛记录'}结果，方案由「${plan.title}」调整为「${newPlan.title}」`,
+            detailedReasons,
+            triggerSource,
+            beforeRiskLevel: beforeRisk ?? undefined,
+            afterRiskLevel: beforeRisk ?? undefined,
+            beforePainCount,
+            afterPainCount: beforePainCount,
+            affectedPlanIds: [planId, newPlan.id],
+            addedReminderIds: addedIds,
+            removedReminderIds: removedIds,
+            updatedReminderIds: updatedIds,
+            affectedDateKeys: [...new Set(affectedDateKeys)]
+          };
+
+          newReminders = newReminders.filter(r => !removedIds.includes(r.id));
+          newReminders = [...newReminders, ...newRemindersForPlan];
+
+          newAdjustments.push(adjustment);
+          totalRemoved += removedIds.length;
+          totalAdded += addedIds.length;
+        });
+
+        if (beforeRisk === 'low' && beforePainCount === 0) {
           const removeIds: string[] = [];
-          reminders.forEach(r => {
-            if (!r.done && r.originPlanId && planCoverage[r.originPlanId]?.planType !== 'recovery') {
-              if (r.originPlanId && planCoverage[r.originPlanId].planType === 'rest') {
-                removeIds.push(r.id);
-                removed += 1;
-              }
+          newReminders.forEach(r => {
+            if (!r.done && r.type === 'rest' && r.originPlanId) {
+              removeIds.push(r.id);
             }
           });
           if (removeIds.length > 0) {
-            set((s) => ({ reminders: s.reminders.filter(r => !removeIds.includes(r.id)) }));
+            newReminders = newReminders.filter(r => !removeIds.includes(r.id));
+            const adjustmentId = generateId();
+            const affectedDateKeys = [...new Set(
+              reminders.filter(r => removeIds.includes(r.id)).map(r => r.date)
+            )];
+            const adjustment: ScheduleAdjustment = {
+              id: adjustmentId,
+              timestamp: Date.now(),
+              type: 'cancel',
+              reason: '风险降低且无疼痛，自动取消休息类安排',
+              detailedReasons: [
+                '当前风险等级：低',
+                '当前无活动中疼痛部位',
+                '已无必要继续主动休息',
+                '可逐步恢复常规训练'
+              ],
+              triggerSource,
+              beforeRiskLevel: beforeRisk ?? undefined,
+              afterRiskLevel: beforeRisk ?? undefined,
+              beforePainCount,
+              afterPainCount: beforePainCount,
+              affectedPlanIds: [],
+              addedReminderIds: [],
+              removedReminderIds: removeIds,
+              updatedReminderIds: [],
+              affectedDateKeys
+            };
+            newAdjustments.push(adjustment);
+            totalRemoved += removeIds.length;
           }
         }
-        return { updated, removed };
+
+        if (newAdjustments.length > 0) {
+          set((s) => ({
+            reminders: newReminders,
+            scheduleAdjustments: [...newAdjustments, ...s.scheduleAdjustments]
+          }));
+        }
+
+        return {
+          updated: totalUpdated,
+          removed: totalRemoved,
+          added: totalAdded,
+          adjustments: newAdjustments
+        };
       },
 
       updateProfile: (p) => set((s) => ({
@@ -519,8 +733,258 @@ export const useAppStore = create<AppState>()(
         return results
           .sort((a, b) => b.priority - a.priority)
           .slice(0, 3);
+      },
+
+      getScheduleAdjustments: (weekOffset = 0) => {
+        const { scheduleAdjustments, getWeekRange } = get();
+        const { startKey, endKey } = getWeekRange(weekOffset);
+        return scheduleAdjustments.filter(a => {
+          const k = getDateKey(a.timestamp);
+          return k >= startKey && k <= endKey;
+        });
+      },
+
+      getWeeklyTimeline: (weekOffset = 0) => {
+        const {
+          painRecords, trainingRecords, reminders, assessments, scheduleAdjustments,
+          getWeekRange
+        } = get();
+        const { startKey, endKey } = getWeekRange(weekOffset);
+
+        const items: TimelineItem[] = [];
+
+        assessments.forEach(a => {
+          const k = getDateKey(a.timestamp);
+          if (k < startKey || k > endKey) return;
+          const t = new Date(a.timestamp);
+          items.push({
+            id: 'as_' + a.id,
+            type: 'assessment',
+            dateKey: k,
+            timestamp: a.timestamp,
+            timeLabel: `${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`,
+            title: `${getRiskLevelText(a.riskLevel)}风险自测`,
+            description: `综合得分 ${a.score} 分${a.bodyParts.length > 0 ? ` · 涉及${a.bodyParts.length}个部位` : ''}`,
+            tag: a.riskLevel === 'high' ? '高风险' : a.riskLevel === 'medium' ? '中风险' : '低风险',
+            tagColor: a.riskLevel === 'high' ? '#EF4444' : a.riskLevel === 'medium' ? '#F59E0B' : '#10B981',
+            icon: '🎯'
+          });
+        });
+
+        painRecords.forEach(p => {
+          const k = getDateKey(p.timestamp);
+          if (k < startKey || k > endKey) return;
+          const t = new Date(p.timestamp);
+          const partName = BODY_PART_NAMES[p.bodyPart] || p.bodyPart;
+          items.push({
+            id: 'pn_' + p.id,
+            type: 'pain',
+            dateKey: k,
+            timestamp: p.timestamp,
+            timeLabel: `${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`,
+            title: `${partName}疼痛 VAS ${p.painLevel}`,
+            description: p.description,
+            tag: p.recoveryStatus === 'recovered' ? '已恢复' :
+              p.recoveryStatus === 'improving' ? '好转中' :
+                p.recoveryStatus === 'worsening' ? '加重' : '持平',
+            tagColor: p.recoveryStatus === 'recovered' ? '#10B981' :
+              p.recoveryStatus === 'improving' ? '#3B82F6' :
+                p.recoveryStatus === 'worsening' ? '#EF4444' : '#64748B',
+            icon: '📍'
+          });
+        });
+
+        trainingRecords.forEach(tr => {
+          const k = tr.date;
+          if (k < startKey || k > endKey) return;
+          const t = new Date(tr.timestamp);
+          const sportName = tr.sportType === 'running' ? '跑步' : tr.sportType === 'ball' ? '球类' : '健身';
+          items.push({
+            id: 'tr_' + tr.id,
+            type: 'training',
+            dateKey: k,
+            timestamp: tr.timestamp,
+            timeLabel: `${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`,
+            title: `${sportName} · ${tr.duration}分钟${tr.sets ? ` · ${tr.sets}组` : ''}`,
+            description: tr.note,
+            tag: tr.completed ? '已完成' : '未完成',
+            tagColor: tr.completed ? '#10B981' : '#F59E0B',
+            icon: tr.sportType === 'running' ? '🏃' : tr.sportType === 'ball' ? '⚽' : '💪'
+          });
+        });
+
+        reminders.forEach(r => {
+          if (r.date < startKey || r.date > endKey) return;
+          const ts = parseDateKey(r.date) + 12 * 3600 * 1000;
+          items.push({
+            id: 'rm_' + r.id,
+            type: 'reminder',
+            dateKey: r.date,
+            timestamp: ts,
+            timeLabel: '全天',
+            title: r.title,
+            description: r.description,
+            tag: r.done ? '已完成' : '待办',
+            tagColor: r.done ? '#10B981' : '#F59E0B',
+            icon: '🔔'
+          });
+        });
+
+        scheduleAdjustments.forEach(a => {
+          const k = getDateKey(a.timestamp);
+          if (k < startKey || k > endKey) return;
+          const t = new Date(a.timestamp);
+          const typeName =
+            a.type === 'upgrade' ? '方案升级' :
+              a.type === 'downgrade' ? '方案降级' :
+                a.type === 'cancel' ? '方案取消' :
+                  a.type === 'extend' ? '方案延期' : '方案调整';
+          items.push({
+            id: 'ad_' + a.id,
+            type: 'adjustment',
+            dateKey: k,
+            timestamp: a.timestamp,
+            timeLabel: `${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`,
+            title: `🤖 ${typeName}`,
+            description: a.reason,
+            tag: '系统自动',
+            tagColor: '#8B5CF6',
+            icon: '🔄'
+          });
+        });
+
+        return items.sort((a, b) => {
+          if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
+          return a.timestamp - b.timestamp;
+        });
+      },
+
+      getNextWeekRecommendation: () => {
+        const {
+          getWeeklyTrainingStats, getWeeklyTrend, getLatestRiskLevel,
+          getLatestPainfulParts, getRecoveryStatusSummary, getSmartRecommendations
+        } = get();
+
+        const thisWeekStats = getWeeklyTrainingStats(0);
+        const lastWeekStats = getWeeklyTrainingStats(-1);
+        const thisWeekTrend = getWeeklyTrend(0);
+
+        const completionRate = thisWeekStats.completionRate;
+        const painDelta = (() => {
+          const thisWeekPain = thisWeekTrend.reduce((s, d) => s + d.painCount, 0);
+          const lastWeekPain = getWeeklyTrend(-1).reduce((s, d) => s + d.painCount, 0);
+          return thisWeekPain - lastWeekPain;
+        })();
+        const riskLevel = getLatestRiskLevel();
+        const painfulParts = getLatestPainfulParts();
+        const recovery = getRecoveryStatusSummary();
+
+        const trainingLoadDelta = Math.round(thisWeekStats.totalMinutes - lastWeekStats.totalMinutes);
+
+        let strategy: NextWeekStrategy = 'maintain';
+        let strategyName = '维持现状';
+        const detailedReasons: string[] = [];
+
+        if (riskLevel === 'high' || painfulParts.length >= 2) {
+          strategy = 'rest';
+          strategyName = '主动休息周';
+          detailedReasons.push('当前处于高风险或多部位疼痛');
+          detailedReasons.push('建议优先休息，给身体充分恢复时间');
+        } else if (painDelta > 0 || recovery.worsening > 0) {
+          strategy = 'taper';
+          strategyName = '减量调整周';
+          detailedReasons.push('本周疼痛记录较上周增加');
+          detailedReasons.push('建议降低训练量 30-50%');
+        } else if (completionRate < 50 && thisWeekStats.totalCount > 2) {
+          strategy = 'taper';
+          strategyName = '减量调整周';
+          detailedReasons.push(`本周完成率仅 ${completionRate}%`);
+          detailedReasons.push('建议下调训练强度，逐步找回节奏');
+        } else if (riskLevel === 'low' && painfulParts.length === 0 && recovery.recovered > 0) {
+          strategy = 'advance';
+          strategyName = '进阶恢复周';
+          detailedReasons.push('风险低且无活动疼痛');
+          detailedReasons.push('已恢复部位可逐步回归正常训练');
+        } else if (recovery.improving > 0) {
+          strategy = 'recovery';
+          strategyName = '康复巩固周';
+          detailedReasons.push(`${recovery.improving} 个部位正在好转`);
+          detailedReasons.push('建议继续康复训练巩固效果');
+        } else if (completionRate >= 85 && thisWeekStats.totalMinutes > 120) {
+          strategy = 'advance';
+          strategyName = '进阶提升周';
+          detailedReasons.push(`本周完成率 ${completionRate}%，表现优秀`);
+          detailedReasons.push('下周可适当增加训练量 10-15%');
+        } else {
+          detailedReasons.push('当前状态平稳');
+          detailedReasons.push('建议维持现有训练节奏');
+        }
+
+        const smartRecs = getSmartRecommendations();
+        const recommendedPlanIds = smartRecs.slice(0, 2).map(r => r.planId);
+
+        const predictedDays = smartRecs.length > 0
+          ? Math.min(7, smartRecs[0].recommendedDurationDays + 1)
+          : 5;
+
+        let scheduleNote = '';
+        if (strategy === 'rest') {
+          scheduleNote = '以完全休息为主，可做轻度拉伸，避免任何高强度运动';
+        } else if (strategy === 'taper') {
+          scheduleNote = '训练量降低 30-50%，重点放在热身和恢复，疼痛部位完全休息';
+        } else if (strategy === 'recovery') {
+          scheduleNote = '继续当前康复方案，每天完成指定动作，周末做一次全面评估';
+        } else if (strategy === 'advance') {
+          scheduleNote = '可逐步增加训练强度和时长，但仍需注意热身和冷身，防止复发';
+        } else {
+          scheduleNote = '保持现有训练节奏，注意睡眠和营养，持续监测身体反应';
+        }
+
+        return {
+          strategy,
+          strategyName,
+          reason: detailedReasons.slice(0, 2).join(' · '),
+          detailedReasons,
+          recommendedPlanIds,
+          predictedDurationDays: predictedDays,
+          keyMetrics: {
+            completionRate,
+            painDelta,
+            riskDelta: 0,
+            trainingLoadDelta
+          },
+          scheduleNote
+        } as NextWeekRecommendation;
+      },
+
+      applyNextWeekRecommendation: () => {
+        const { getNextWeekRecommendation, addPlanWithSchedule, getWeekRange } = get();
+        const rec = getNextWeekRecommendation();
+        if (!rec || rec.recommendedPlanIds.length === 0) return null;
+
+        const nextMonday = getWeekRange(1).startKey;
+        let totalCreated = 0;
+        let planCount = 0;
+        let totalDays = 0;
+
+        let usedDays = 0;
+        for (let i = 0; i < rec.recommendedPlanIds.length && usedDays < 7; i++) {
+          const planId = rec.recommendedPlanIds[i];
+          const plan = TRAINING_PLANS.find(p => p.id === planId);
+          if (!plan) continue;
+          const days = Math.min(plan.defaultDurationDays, 7 - usedDays);
+          if (days < 1) continue;
+          const startKey = addDaysToDateKey(nextMonday, usedDays);
+          const result = addPlanWithSchedule(planId, startKey, days);
+          totalCreated += result.created;
+          totalDays += result.days;
+          usedDays += result.days;
+          planCount += 1;
+        }
+
+        return { created: totalCreated, days: totalDays, planCount };
       }
     }),
-    { name: 'injury-prevention-store-v3' }
+    { name: 'injury-prevention-store-v4' }
   )
 );

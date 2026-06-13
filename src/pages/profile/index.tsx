@@ -8,11 +8,12 @@ import { KNOWLEDGE_CARDS } from '@/data/knowledge';
 import { EMERGENCY_RULES } from '@/data/training';
 import KnowledgeCard from '@/components/KnowledgeCard';
 import { getSportTypeName } from '@/utils/risk';
-import { SportType, UserProfile, TrainingRecord, ReminderItem, ReminderType, RiskLevel } from '@/types';
+import { SportType, UserProfile, TrainingRecord, ReminderItem, ReminderType, RiskLevel, TimelineItem } from '@/types';
 
 type KnowledgeCat = 'all' | 'prevention' | 'treatment' | 'recovery' | 'emergency';
 type TrendMetric = 'risk' | 'pain' | 'recovery' | 'training';
 type ModalType = 'profile' | 'training' | 'editTraining' | null;
+type ReportView = 'stats' | 'timeline' | 'card';
 
 const CATS: { key: KnowledgeCat; name: string }[] = [
   { key: 'all', name: '全部' },
@@ -53,7 +54,7 @@ const ProfilePage: React.FC = () => {
   const {
     userProfile, updateProfile,
     getWeeklyTrend, getWeeklyTrainingStats, getRecoveryStatusSummary, getWeekRange,
-    getLatestRiskLevel,
+    getLatestRiskLevel, getWeeklyTimeline, getScheduleAdjustments,
     assessments, painRecords, reminders, trainingRecords,
     addTrainingRecord, updateTrainingRecord, toggleTrainingRecord, deleteTrainingRecord,
     toggleReminder
@@ -65,6 +66,7 @@ const ProfilePage: React.FC = () => {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [sportFilter, setSportFilter] = useState<SportType | 'all'>('all');
+  const [reportView, setReportView] = useState<ReportView>('stats');
 
   // --- 个人资料编辑 ---
   const [editProfile, setEditProfile] = useState<UserProfile>(userProfile);
@@ -135,6 +137,12 @@ const ProfilePage: React.FC = () => {
   ]);
 
   const weekLabel = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
+  const timeline: TimelineItem[] = useMemo(() => getWeeklyTimeline(weekOffset), [
+    weekOffset, assessments.length, painRecords.length, trainingRecords.length, reminders.length
+  ]);
+  const adjustments = useMemo(() => getScheduleAdjustments(weekOffset), [
+    weekOffset, reminders.length
+  ]);
   const recoverySum = getRecoveryStatusSummary();
   const avgRiskWeek = useMemo(() => {
     const recent = trend.filter(t => t.assessmentCount > 0);
@@ -278,6 +286,26 @@ const ProfilePage: React.FC = () => {
               }}>{RISK_TEXT[currentRiskLevel]}</Text>
             )}
           </View>
+          <View className={styles.reportViewTabs}>
+            <View
+              className={classnames(styles.reportViewTab, { [styles.active]: reportView === 'stats' })}
+              onClick={() => { setReportView('stats'); Taro.vibrateShort({ type: 'light' }); }}
+            >
+              📊 统计
+            </View>
+            <View
+              className={classnames(styles.reportViewTab, { [styles.active]: reportView === 'timeline' })}
+              onClick={() => { setReportView('timeline'); Taro.vibrateShort({ type: 'light' }); }}
+            >
+              📖 时间线
+            </View>
+            <View
+              className={classnames(styles.reportViewTab, { [styles.active]: reportView === 'card' })}
+              onClick={() => { setReportView('card'); Taro.vibrateShort({ type: 'light' }); }}
+            >
+              🎴 卡片
+            </View>
+          </View>
         </View>
 
         {/* 周导航 */}
@@ -292,8 +320,10 @@ const ProfilePage: React.FC = () => {
           >›</View>
         </View>
 
-        {/* 周级汇总（更清晰的展示） */}
-        <View className={styles.summaryRow}>
+        {reportView === 'stats' && (
+          <>
+            {/* 周级汇总（更清晰的展示） */}
+            <View className={styles.summaryRow}>
           <View className={classnames(styles.summaryBox, styles.highlight)}>
             <Text className={styles.summaryNum}>
               {hoursDisplay}<Text className={styles.unit}>h</Text>{minsDisplay > 0 && <Text> {minsDisplay}<Text className={styles.unit}>分</Text></Text>}
@@ -507,6 +537,185 @@ const ProfilePage: React.FC = () => {
             <Text className={styles.statLabel}>训练时长</Text>
           </View>
         </View>
+          </>
+        )}
+
+        {reportView === 'timeline' && (
+          <View className={styles.timelineWrap}>
+            {adjustments.length > 0 && (
+              <View className={styles.adjustNotice}>
+                <Text className={styles.adjustIcon}>🔄</Text>
+                <View style={{ flex: 1 }}>
+                  <Text className={styles.adjustTitle}>
+                    本周系统自动调整 {adjustments.length} 次
+                  </Text>
+                  <Text className={styles.adjustDesc}>
+                    根据您的风险自测和疼痛记录，智能调整了训练方案
+                  </Text>
+                </View>
+              </View>
+            )}
+            <View className={styles.timeline}>
+              {timeline.length > 0 ? (() => {
+                const groups: Record<string, TimelineItem[]> = {};
+                timeline.forEach(item => {
+                  if (!groups[item.dateKey]) groups[item.dateKey] = [];
+                  groups[item.dateKey].push(item);
+                });
+                const days = trend.map(d => d.dateKey);
+                return days.map(dateKey => {
+                  const dayItems = groups[dateKey] || [];
+                  const dayInfo = trend.find(d => d.dateKey === dateKey);
+                  const isToday = dateKey === todayKey;
+                  return (
+                    <View key={dateKey} className={styles.tlDay}>
+                      <View className={styles.tlDayHeader}>
+                        <Text className={styles.tlDayDate}>
+                          {dayInfo?.dayOfWeek || ''} · {dateKey.slice(5)}
+                          {isToday && <Text className={styles.tlTodayTag}> 今天</Text>}
+                        </Text>
+                        {dayInfo && dayInfo.trainingMinutes > 0 && (
+                          <Text className={styles.tlDayMeta}>
+                            训练 {dayInfo.trainingMinutes} 分钟
+                          </Text>
+                        )}
+                      </View>
+                      {dayItems.length > 0 ? (
+                        <View className={styles.tlItems}>
+                          {dayItems.map(item => (
+                            <View key={item.id} className={classnames(styles.tlItem, styles[item.type])}>
+                              <View className={styles.tlDot} />
+                              <View className={styles.tlTime}>{item.timeLabel}</View>
+                              <View className={styles.tlContent}>
+                                <View className={styles.tlTitleRow}>
+                                  <Text className={styles.tlIcon}>{item.icon}</Text>
+                                  <Text className={styles.tlTitle}>{item.title}</Text>
+                                  {item.tag && (
+                                    <Text
+                                      className={styles.tlTag}
+                                      style={{ background: (item.tagColor || '#64748B') + '22', color: item.tagColor || '#64748B' }}
+                                    >
+                                      {item.tag}
+                                    </Text>
+                                  )}
+                                </View>
+                                {item.description && (
+                                  <Text className={styles.tlDesc}>{item.description}</Text>
+                                )}
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <View className={styles.tlEmpty}>
+                          <Text>今日暂无记录</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                });
+              })() : (
+                <View className={styles.tlEmpty}>
+                  <Text style={{ fontSize: 64, display: 'block', marginBottom: 16 }}>📭</Text>
+                  <Text>本周暂无记录</Text>
+                  <Text style={{ fontSize: 22, marginTop: 8, color: '#94A3B8' }}>去首页完成一次风险自测或记录疼痛吧</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {reportView === 'card' && (
+          <View className={styles.reportCard}>
+            <View className={styles.cardHeader}>
+              <View>
+                <Text className={styles.cardTitle}>{userProfile.name} 的运动周报</Text>
+                <Text className={styles.cardDate}>
+                  {weekLabel.startKey.replace(/-/g, '.').slice(5)} - {weekLabel.endKey.replace(/-/g, '.').slice(5)}
+                </Text>
+              </View>
+              <View className={styles.cardAvatar}>
+                <Text style={{ fontSize: 48 }}>🏃</Text>
+              </View>
+            </View>
+
+            <View className={styles.cardStatsRow}>
+              <View className={styles.cardStat}>
+                <Text className={styles.cardStatNum}>
+                  {hoursDisplay}<Text style={{ fontSize: 22 }}>h {minsDisplay}分</Text>
+                </Text>
+                <Text className={styles.cardStatLbl}>总训练量</Text>
+              </View>
+              <View className={styles.cardStat}>
+                <Text className={styles.cardStatNum}>{stats.completionRate}%</Text>
+                <Text className={styles.cardStatLbl}>完成率</Text>
+              </View>
+              <View className={styles.cardStat}>
+                <Text className={styles.cardStatNum}>{stats.totalCount}</Text>
+                <Text className={styles.cardStatLbl}>训练次数</Text>
+              </View>
+            </View>
+
+            <View className={styles.cardDivider} />
+
+            <View className={styles.cardSection}>
+              <Text className={styles.cardSectionTitle}>📌 本周关键数据</Text>
+              <View className={styles.cardGrid}>
+                <View className={styles.cardGridItem}>
+                  <Text className={styles.cardGridLabel}>周均风险</Text>
+                  <Text className={styles.cardGridVal} style={{ color: avgRiskWeek >= 60 ? '#EF4444' : avgRiskWeek >= 35 ? '#F59E0B' : '#10B981' }}>
+                    {avgRiskWeek} 分
+                  </Text>
+                </View>
+                <View className={styles.cardGridItem}>
+                  <Text className={styles.cardGridLabel}>疼痛记录</Text>
+                  <Text className={styles.cardGridVal} style={{ color: painCountWeek > 3 ? '#EF4444' : '#64748B' }}>
+                    {painCountWeek} 条
+                  </Text>
+                </View>
+                <View className={styles.cardGridItem}>
+                  <Text className={styles.cardGridLabel}>好转次数</Text>
+                  <Text className={styles.cardGridVal} style={{ color: '#10B981' }}>
+                    {recoverySum.improving + recoverySum.recovered}
+                  </Text>
+                </View>
+                <View className={styles.cardGridItem}>
+                  <Text className={styles.cardGridLabel}>训练组数</Text>
+                  <Text className={styles.cardGridVal} style={{ color: '#3B82F6' }}>
+                    {stats.totalSets} 组
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {topSportName && (
+              <>
+                <View className={styles.cardDivider} />
+                <View className={styles.cardSection}>
+                  <Text className={styles.cardSectionTitle}>🏆 最常练项目</Text>
+                  <View className={styles.cardTopSport}>
+                    <Text style={{ fontSize: 40, marginRight: 16 }}>{sportIcon(stats.topSport as SportType)}</Text>
+                    <View>
+                      <Text className={styles.cardTopSportName}>{topSportName}</Text>
+                      <Text className={styles.cardTopSportDesc}>
+                        本周共 {stats.bySport[stats.topSport!]?.count || 0} 次，{stats.bySport[stats.topSport!]?.minutes || 0} 分钟
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </>
+            )}
+
+            <View className={styles.cardDivider} />
+            <View className={styles.cardFooter}>
+              <Text className={styles.cardFooterText}>坚持就是胜利 · 下周继续加油 💪</Text>
+            </View>
+
+            <View className={styles.cardExportHint}>
+              <Text>💡 截图保存本卡片，分享到朋友圈</Text>
+            </View>
+          </View>
+        )}
 
         {/* --- 训练记录（本周） --- */}
         <View className={styles.trainingSection}>

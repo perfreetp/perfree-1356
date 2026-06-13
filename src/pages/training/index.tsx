@@ -6,7 +6,7 @@ import styles from './index.module.scss';
 import { TRAINING_PLANS, EMERGENCY_RULES } from '@/data/training';
 import { useAppStore } from '@/store/app';
 import { getRiskLevelText, BODY_PART_NAMES } from '@/utils/risk';
-import { PlanType, ReminderType, DayScheduleItem } from '@/types';
+import { PlanType, ReminderType, DayScheduleItem, TrainingRecord, SportType } from '@/types';
 
 type PlanTab = PlanType;
 type ViewMode = 'list' | 'calendar';
@@ -84,7 +84,12 @@ const TrainingPage: React.FC = () => {
     getDaySchedule,
     getWeekRange,
     cancelPlanSchedule,
-    refreshPlanSchedulesByState
+    refreshPlanSchedulesByState,
+    addTrainingRecord,
+    updateTrainingRecord,
+    deleteTrainingRecord,
+    getNextWeekRecommendation,
+    applyNextWeekRecommendation
   } = useAppStore();
 
   const weekRange = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
@@ -105,6 +110,14 @@ const TrainingPage: React.FC = () => {
     getRecoveryStatusSummary()
   ]);
 
+  const nextWeekRec = useMemo(() => getNextWeekRecommendation(), [
+    reminders.length,
+    trainingRecords.length,
+    getLatestRiskLevel(),
+    getLatestPainfulParts().length,
+    getRecoveryStatusSummary()
+  ]);
+
   const latestRisk = getLatestRiskLevel();
   const painfulParts = getLatestPainfulParts();
   const recoverySummary = getRecoveryStatusSummary();
@@ -116,6 +129,18 @@ const TrainingPage: React.FC = () => {
     medium: { text: '中强度', color: '#F59E0B', bg: '#FEF3C7' },
     high: { text: '高强度', color: '#EF4444', bg: '#FEE2E2' }
   }[i] || { text: i, color: '#64748B', bg: '#F1F5F9' });
+
+  const getIntensityLabel = (level: number) => {
+    const labels = ['', '很轻松', '轻松', '中等', '较强', '高强度'];
+    return labels[level] || '中等';
+  };
+
+  const getIntensityColor = (level: number) => {
+    if (level <= 2) return { color: '#10B981', bg: '#ECFDF5' };
+    if (level <= 3) return { color: '#3B82F6', bg: '#DBEAFE' };
+    if (level <= 4) return { color: '#F59E0B', bg: '#FEF3C7' };
+    return { color: '#EF4444', bg: '#FEE2E2' };
+  };
 
   const addPlanToSchedule = (planId: string) => {
     const plan = TRAINING_PLANS.find(p => p.id === planId);
@@ -232,6 +257,112 @@ const TrainingPage: React.FC = () => {
     });
   };
 
+  const handleDayQuickAdd = (dateKey: string) => {
+    Taro.showActionSheet({
+      itemList: ['📅 新增日程提醒', '🏃 新增训练记录'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          handleAddReminderToDate(dateKey);
+        } else if (res.tapIndex === 1) {
+          handleAddTrainingToDate(dateKey);
+        }
+      }
+    });
+  };
+
+  const handleAddTrainingToDate = (dateKey: string) => {
+    const sportOptions = [
+      { key: 'running', name: '🏃 跑步训练' },
+      { key: 'ball', name: '⚽ 球类训练' },
+      { key: 'fitness', name: '💪 健身力量' }
+    ];
+    Taro.showActionSheet({
+      itemList: sportOptions.map(o => o.name),
+      success: (res) => {
+        const sportType = sportOptions[res.tapIndex].key as SportType;
+        Taro.showModal({
+          title: '新增训练记录',
+          editable: true,
+          placeholderText: '请输入训练时长（分钟）',
+          confirmText: '添加',
+          success: (mRes) => {
+            if (mRes.confirm) {
+              const mins = parseInt(mRes.content || '30', 10);
+              if (isNaN(mins) || mins <= 0) {
+                Taro.showToast({ title: '请输入有效时长', icon: 'none' });
+                return;
+              }
+              addTrainingRecord({
+                sportType,
+                duration: mins,
+                intensity: 3,
+                completed: true,
+                dateKey
+              });
+              Taro.showToast({ title: '已记录', icon: 'success' });
+              Taro.vibrateShort({ type: 'light' });
+            }
+          }
+        });
+      }
+    });
+  };
+
+  const handleEditTraining = (record: TrainingRecord) => {
+    Taro.showModal({
+      title: '编辑训练时长',
+      editable: true,
+      placeholderText: '请输入训练时长（分钟）',
+      content: String(record.duration),
+      confirmText: '保存',
+      success: (res) => {
+        if (res.confirm) {
+          const mins = parseInt(res.content || '30', 10);
+          if (isNaN(mins) || mins <= 0) {
+            Taro.showToast({ title: '请输入有效时长', icon: 'none' });
+            return;
+          }
+          updateTrainingRecord(record.id, { duration: mins });
+          Taro.showToast({ title: '已更新', icon: 'success' });
+        }
+      }
+    });
+  };
+
+  const handleChangeTrainingDate = (id: string, currentDate: string) => {
+    const todayTs = new Date(today).getTime();
+    const dates: { key: string; label: string }[] = [];
+    for (let i = -7; i <= 10; i++) {
+      const ts = todayTs + i * 86400000;
+      const d = new Date(ts).toISOString().split('T')[0];
+      dates.push({ key: d, label: formatDateLabel(d) + ` (${d.slice(5)})` });
+    }
+
+    Taro.showActionSheet({
+      itemList: dates.map(d => d.label),
+      success: (res) => {
+        const newDate = dates[res.tapIndex].key;
+        updateTrainingRecord(id, { dateKey: newDate });
+        Taro.showToast({ title: `已调整到${formatDateLabel(newDate)}`, icon: 'success' });
+      }
+    });
+  };
+
+  const handleDeleteTraining = (id: string, title: string) => {
+    Taro.showModal({
+      title: '删除训练记录',
+      content: `确认删除这条${title}记录？删除后无法恢复。`,
+      confirmText: '删除',
+      confirmColor: '#EF4444',
+      success: (res) => {
+        if (res.confirm) {
+          deleteTrainingRecord(id);
+          Taro.showToast({ title: '已删除', icon: 'success' });
+        }
+      }
+    });
+  };
+
   const handleCancelPlan = (originPlanId: string, title: string) => {
     Taro.showModal({
       title: '取消整个方案日程',
@@ -242,6 +373,42 @@ const TrainingPage: React.FC = () => {
         if (res.confirm) {
           const n = cancelPlanSchedule(originPlanId);
           Taro.showToast({ title: `已移除${n}条安排`, icon: 'success' });
+        }
+      }
+    });
+  };
+
+  const handleApplyNextWeek = () => {
+    if (!nextWeekRec) return;
+    Taro.showModal({
+      title: `生成下周安排 - ${nextWeekRec.strategyName}`,
+      content: `${nextWeekRec.scheduleNote}\n\n将为您自动安排下周一到周日的训练计划，确认后立即生成。`,
+      confirmText: '一键生成',
+      confirmColor: '#10B981',
+      success: (res) => {
+        if (res.confirm) {
+          const result = applyNextWeekRecommendation();
+          if (result) {
+            Taro.showToast({
+              title: `已生成${result.planCount}个方案共${result.days}天`,
+              icon: 'success',
+              duration: 2000
+            });
+            Taro.vibrateShort({ type: 'medium' });
+            setWeekOffset(1);
+            setTimeout(() => {
+              const info = refreshPlanSchedulesByState();
+              if (info.adjustments.length > 0) {
+                Taro.showToast({
+                  title: `智能调整了${info.adjustments.length}处`,
+                  icon: 'none',
+                  duration: 1500
+                });
+              }
+            }, 500);
+          } else {
+            Taro.showToast({ title: '生成失败', icon: 'none' });
+          }
         }
       }
     });
@@ -524,6 +691,59 @@ const TrainingPage: React.FC = () => {
 
       {viewMode === 'calendar' && (
         <>
+          {nextWeekRec && (
+            <View className={classnames(styles.nextWeekCard, styles[nextWeekRec.strategy])}>
+              <View className={styles.nwHeader}>
+                <View className={styles.nwIcon}>
+                  {nextWeekRec.strategy === 'rest' && '😴'}
+                  {nextWeekRec.strategy === 'taper' && '📉'}
+                  {nextWeekRec.strategy === 'maintain' && '⚖️'}
+                  {nextWeekRec.strategy === 'recovery' && '💪'}
+                  {nextWeekRec.strategy === 'advance' && '🚀'}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View className={styles.nwTitle}>
+                    下周建议：{nextWeekRec.strategyName}
+                  </View>
+                  <View className={styles.nwReason}>
+                    {nextWeekRec.reason}
+                  </View>
+                </View>
+              </View>
+
+              <View className={styles.nwMetrics}>
+                <View className={styles.nwMetric}>
+                  <Text className={styles.nwMetricNum}>{nextWeekRec.keyMetrics.completionRate}%</Text>
+                  <Text className={styles.nwMetricLbl}>本周完成率</Text>
+                </View>
+                <View className={styles.nwMetric}>
+                  <Text className={styles.nwMetricNum} style={{ color: nextWeekRec.keyMetrics.painDelta > 0 ? '#EF4444' : '#10B981' }}>
+                    {nextWeekRec.keyMetrics.painDelta > 0 ? '+' : ''}{nextWeekRec.keyMetrics.painDelta}
+                  </Text>
+                  <Text className={styles.nwMetricLbl}>疼痛变化</Text>
+                </View>
+                <View className={styles.nwMetric}>
+                  <Text className={styles.nwMetricNum} style={{ color: nextWeekRec.keyMetrics.trainingLoadDelta > 0 ? '#3B82F6' : '#94A3B8' }}>
+                    {nextWeekRec.keyMetrics.trainingLoadDelta > 0 ? '+' : ''}{nextWeekRec.keyMetrics.trainingLoadDelta}分
+                  </Text>
+                  <Text className={styles.nwMetricLbl}>负荷变化</Text>
+                </View>
+                <View className={styles.nwMetric}>
+                  <Text className={styles.nwMetricNum}>{nextWeekRec.predictedDurationDays}天</Text>
+                  <Text className={styles.nwMetricLbl}>建议安排</Text>
+                </View>
+              </View>
+
+              <View className={styles.nwNote}>
+                💡 {nextWeekRec.scheduleNote}
+              </View>
+
+              <View className={styles.nwAction} onClick={handleApplyNextWeek}>
+                一键生成下周安排 →
+              </View>
+            </View>
+          )}
+
           <View className={styles.legendRow}>
             {[
               { k: 'rest', n: '休息' },
@@ -616,9 +836,9 @@ const TrainingPage: React.FC = () => {
                 </View>
                 <View
                   className={styles.dayQuickAdd}
-                  onClick={() => handleAddReminderToDate(selectedDay.dateKey)}
+                  onClick={() => handleDayQuickAdd(selectedDay.dateKey)}
                 >
-                  + 新增安排
+                  + 新增
                 </View>
               </View>
 
@@ -644,6 +864,35 @@ const TrainingPage: React.FC = () => {
                   </>
                 )}
               </View>
+
+              {selectedDay.trainingRecords.length > 0 && (
+                <View className={styles.dayTrainingSummary}>
+                  <View className={styles.dtsItem}>
+                    <Text className={styles.dtsNum}>
+                      {selectedDay.trainingRecords.reduce((s, t) => s + t.duration, 0)}
+                    </Text>
+                    <Text className={styles.dtsLbl}>总时长(分钟)</Text>
+                  </View>
+                  <View className={styles.dtsItem}>
+                    <Text className={styles.dtsNum}>{selectedDay.trainingRecords.length}</Text>
+                    <Text className={styles.dtsLbl}>训练次数</Text>
+                  </View>
+                  <View className={styles.dtsItem}>
+                    <Text className={styles.dtsNum}>
+                      {selectedDay.trainingRecords.reduce((s, t) => s + (t.sets || 0), 0)}
+                    </Text>
+                    <Text className={styles.dtsLbl}>总组数</Text>
+                  </View>
+                  <View className={styles.dtsItem}>
+                    <Text className={styles.dtsNum}>
+                      {selectedDay.trainingRecords.length > 0
+                        ? (selectedDay.trainingRecords.reduce((s, t) => s + t.intensity, 0) / selectedDay.trainingRecords.length).toFixed(1)
+                        : '-'}
+                    </Text>
+                    <Text className={styles.dtsLbl}>平均强度</Text>
+                  </View>
+                </View>
+              )}
 
               {selectedDay.reminders.length === 0 && selectedDay.trainingRecords.length === 0 ? (
                 <View className={styles.dayScheduleEmpty}>
@@ -728,16 +977,39 @@ const TrainingPage: React.FC = () => {
                               <View className={styles.tag} style={{ background: '#DBEAFE', color: '#2563EB' }}>
                                 {({ running: '跑步', ball: '球类', fitness: '健身' } as any)[t.sportType] || '训练'}
                               </View>
-                              <View className={styles.tag}>
-                                {t.intensity === 'low' ? '低' : t.intensity === 'medium' ? '中' : '高'}强度
+                              <View className={styles.tag} style={{ background: getIntensityColor(t.intensity).bg, color: getIntensityColor(t.intensity).color }}>
+                                {getIntensityLabel(t.intensity)}强度
                               </View>
                             </View>
                             <View className={styles.title}>
-                              {t.minutes || 0} 分钟
+                              {t.duration} 分钟
                               {t.sets ? ` · ${t.sets}组` : ''}
-                              {t.distance ? ` · ${t.distance}km` : ''}
                             </View>
-                            {t.notes && <View className={styles.desc}>{t.notes}</View>}
+                            {t.note && <View className={styles.desc}>{t.note}</View>}
+                          </View>
+                          <View className={styles.schedActions}>
+                            <View style={{ display: 'flex', gap: 4 }}>
+                              <View
+                                className={styles.shiftBtn}
+                                onClick={() => handleEditTraining(t)}
+                              >
+                                ✏️ 编辑
+                              </View>
+                              <View
+                                className={styles.shiftBtn}
+                                onClick={() => handleChangeTrainingDate(t.id, t.date)}
+                              >
+                                📅 改日期
+                              </View>
+                            </View>
+                            <View style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                              <View
+                                className={styles.delBtn}
+                                onClick={() => handleDeleteTraining(t.id, `${t.sportType}训练`)}
+                              >
+                                删除
+                              </View>
+                            </View>
                           </View>
                         </View>
                       ))}

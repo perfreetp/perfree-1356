@@ -948,3 +948,352 @@
 }
 
 .editSvg { font-size: 22rpx; color: $color-primary; }
+
+.reportViewTabs {
+  display: flex;
+  gap: 4rpx;
+  background: $color-divider;
+  border-radius: $radius-md;
+  padding: 4rpx;
+}
+
+.reportViewTab {
+  padding: 10rpx 18rpx;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  border-radius: $radius-sm;
+  font-weight: 500;
+  transition: all 0.15s;
+
+  &.active {
+    background: #fff;
+    color: $color-primary-dark;
+    font-weight: 700;
+    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
+  }
+}
+
+.timelineWrap {
+  margin-top: $spacing-sm;
+}
+
+.adjustNotice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+  border-left: 6rpx solid #8B5CF6;
+}
+
+.adjustIcon { font-size: 36rpx; }
+
+.adjustTitle {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #5B21B6;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.adjustDesc {
+  font-size: 22rpx;
+  color: #7C3AED;
+  line-height: 1.5;
+}
+
+.timeline {
+  position: relative;
+}
+
+.tlDay {
+  margin-bottom: $spacing-md;
+}
+
+.tlDayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm $spacing-xs;
+  background: $color-divider;
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.tlDayDate {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: $color-text-primary;
+}
+
+.tlTodayTag {
+  color: $color-secondary;
+  font-weight: 700;
+  font-size: 22rpx;
+}
+
+.tlDayMeta {
+  font-size: 22rpx;
+  color: $color-primary-dark;
+  font-weight: 600;
+}
+
+.tlItems {
+  padding-left: $spacing-md;
+  border-left: 3rpx solid $color-primary-50;
+  margin-left: 18rpx;
+}
+
+.tlItem {
+  position: relative;
+  padding: $spacing-sm $spacing-sm $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  background: #fff;
+  border-radius: $radius-md;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+  border-left: 4rpx solid $color-primary;
+
+  &.training { border-left-color: #3B82F6; }
+  &.pain { border-left-color: #EF4444; }
+  &.assessment { border-left-color: #F59E0B; }
+  &.reminder { border-left-color: #8B5CF6; }
+  &.adjustment { border-left-color: #EC4899; }
+}
+
+.tlDot {
+  position: absolute;
+  left: -34rpx;
+  top: 22rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $radius-round;
+  background: $color-primary;
+  border: 4rpx solid #fff;
+  box-shadow: 0 0 0 2rpx $color-primary-50;
+
+  .training & { background: #3B82F6; box-shadow: 0 0 0 2rpx #DBEAFE; }
+  .pain & { background: #EF4444; box-shadow: 0 0 0 2rpx #FEE2E2; }
+  .assessment & { background: #F59E0B; box-shadow: 0 0 0 2rpx #FEF3C7; }
+  .reminder & { background: #8B5CF6; box-shadow: 0 0 0 2rpx #EDE9FE; }
+  .adjustment & { background: #EC4899; box-shadow: 0 0 0 2rpx #FCE7F3; }
+}
+
+.tlTime {
+  position: absolute;
+  left: -100rpx;
+  top: 18rpx;
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  font-weight: 500;
+  width: 80rpx;
+  text-align: right;
+}
+
+.tlContent { flex: 1; }
+
+.tlTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-wrap: wrap;
+  margin-bottom: 4rpx;
+}
+
+.tlIcon { font-size: 28rpx; }
+
+.tlTitle {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.tlTag {
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.tlDesc {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  line-height: 1.5;
+  margin-top: 4rpx;
+}
+
+.tlEmpty {
+  padding: $spacing-lg $spacing-md;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.reportCard {
+  background: linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 30%, #FFF 100%);
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  margin-top: $spacing-sm;
+  border: 2rpx solid #BBF7D0;
+  box-shadow: 0 8rpx 32rpx rgba(16, 185, 129, 0.1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -60rpx;
+    right: -60rpx;
+    width: 200rpx;
+    height: 200rpx;
+    background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-lg;
+}
+
+.cardTitle {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.cardDate {
+  font-size: 24rpx;
+  color: $color-text-secondary;
+}
+
+.cardAvatar {
+  width: 80rpx;
+  height: 80rpx;
+  background: linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%);
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(16, 185, 129, 0.2);
+}
+
+.cardStatsRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.cardStat {
+  flex: 1;
+  background: rgba(255,255,255,0.7);
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-sm;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.cardStatNum {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: $color-primary-dark;
+  display: block;
+  line-height: 1.2;
+}
+
+.cardStatLbl {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.cardDivider {
+  height: 1rpx;
+  background: linear-gradient(90deg, transparent, #BBF7D0, transparent);
+  margin: $spacing-md 0;
+}
+
+.cardSection {
+  margin-bottom: $spacing-sm;
+}
+
+.cardSectionTitle {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+}
+
+.cardGridItem {
+  background: rgba(255,255,255,0.6);
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-md;
+}
+
+.cardGridLabel {
+  font-size: 22rpx;
+  color: $color-text-tertiary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.cardGridVal {
+  font-size: 30rpx;
+  font-weight: 700;
+  display: block;
+}
+
+.cardTopSport {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+}
+
+.cardTopSportName {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #92400E;
+  display: block;
+}
+
+.cardTopSportDesc {
+  font-size: 22rpx;
+  color: #B45309;
+  margin-top: 4rpx;
+}
+
+.cardFooter {
+  text-align: center;
+  padding-top: $spacing-sm;
+}
+
+.cardFooterText {
+  font-size: 24rpx;
+  color: $color-primary-dark;
+  font-weight: 600;
+}
+
+.cardExportHint {
+  text-align: center;
+  padding: $spacing-md 0 0;
+  font-size: 22rpx;
+  color: $color-text-tertiary;
+}
+

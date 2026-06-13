@@ -62,6 +62,8 @@ export interface ReminderItem {
   scheduleStartDate?: string;
   scheduleDayIndex?: number;
   scheduleTotalDays?: number;
+  lastAdjustmentId?: string;
+  originalTitle?: string;
 }
 
 export interface PainRecord {
@@ -149,4 +151,57 @@ export interface DayScheduleItem {
   painCount: number;
   riskLevel: RiskLevel | null;
   hasActivity: boolean;
+}
+
+export type AdjustmentType = 'upgrade' | 'downgrade' | 'cancel' | 'extend' | 'switch';
+
+export interface ScheduleAdjustment {
+  id: string;
+  timestamp: number;
+  type: AdjustmentType;
+  reason: string;
+  detailedReasons: string[];
+  triggerSource: 'assessment' | 'pain' | 'manual';
+  beforeRiskLevel?: RiskLevel;
+  afterRiskLevel?: RiskLevel;
+  beforePainCount?: number;
+  afterPainCount?: number;
+  affectedPlanIds: string[];
+  addedReminderIds: string[];
+  removedReminderIds: string[];
+  updatedReminderIds: string[];
+  affectedDateKeys: string[];
+}
+
+export type NextWeekStrategy = 'taper' | 'maintain' | 'recovery' | 'advance' | 'rest';
+
+export interface NextWeekRecommendation {
+  strategy: NextWeekStrategy;
+  strategyName: string;
+  reason: string;
+  detailedReasons: string[];
+  recommendedPlanIds: string[];
+  predictedDurationDays: number;
+  keyMetrics: {
+    completionRate: number;
+    painDelta: number;
+    riskDelta: number;
+    trainingLoadDelta: number;
+  };
+  scheduleNote: string;
+}
+
+export type TimelineItemType = 'training' | 'pain' | 'assessment' | 'reminder' | 'adjustment';
+
+export interface TimelineItem {
+  id: string;
+  type: TimelineItemType;
+  dateKey: string;
+  timestamp: number;
+  timeLabel: string;
+  title: string;
+  description?: string;
+  tag?: string;
+  tagColor?: string;
+  icon?: string;
 }
