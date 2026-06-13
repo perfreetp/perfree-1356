@@ -1,15 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Button, ScrollView } from '@tarojs/components';
+import { View, Text, Button, ScrollView, Input, Slider } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useAppStore } from '@/store/app';
 import { KNOWLEDGE_CARDS } from '@/data/knowledge';
+import { EMERGENCY_RULES } from '@/data/training';
 import KnowledgeCard from '@/components/KnowledgeCard';
 import { getSportTypeName } from '@/utils/risk';
-import { EMERGENCY_RULES } from '@/data/training';
+import { SportType, UserProfile } from '@/types';
 
 type KnowledgeCat = 'all' | 'prevention' | 'treatment' | 'recovery' | 'emergency';
+type TrendMetric = 'risk' | 'pain' | 'recovery' | 'training';
+type ModalType = 'profile' | 'training' | null;
 
 const CATS: { key: KnowledgeCat; name: string }[] = [
   { key: 'all', name: '全部' },
@@ -19,22 +22,125 @@ const CATS: { key: KnowledgeCat; name: string }[] = [
   { key: 'emergency', name: '急救' }
 ];
 
-const ProfilePage: React.FC = () => {
-  const { userProfile, assessments, painRecords, getWeeklyTrend } = useAppStore();
-  const [cat, setCat] = useState<KnowledgeCat>('all');
+const SPORT_OPTIONS: { key: SportType; name: string; icon: string }[] = [
+  { key: 'running', name: '跑步', icon: '🏃' },
+  { key: 'ball', name: '球类', icon: '⚽' },
+  { key: 'fitness', name: '健身', icon: '💪' }
+];
 
-  const trend = getWeeklyTrend();
-  const maxRisk = Math.max(...trend.map(t => t.riskScore), 50);
-  const maxPain = Math.max(...trend.map(t => t.painCount), 1);
+const TREND_METRICS: { key: TrendMetric; name: string; unit: string }[] = [
+  { key: 'risk', name: '风险评分', unit: '分' },
+  { key: 'pain', name: '疼痛次数', unit: '次' },
+  { key: 'recovery', name: '好转记录', unit: '条' },
+  { key: 'training', name: '训练时长', unit: 'h' }
+];
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+const ProfilePage: React.FC = () => {
+  const {
+    userProfile,
+    updateProfile,
+    getWeeklyTrend,
+    getWeeklyTrainingStats,
+    getRecoveryStatusSummary,
+    assessments,
+    painRecords,
+    reminders,
+    trainingRecords,
+    addTrainingRecord,
+    toggleTrainingRecord,
+    deleteTrainingRecord
+  } = useAppStore();
+
+  const [cat, setCat] = useState<KnowledgeCat>('all');
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>('risk');
+  const [modal, setModal] = useState<ModalType>(null);
+
+  // --- 个人资料编辑 ---
+  const [editProfile, setEditProfile] = useState<UserProfile>(userProfile);
+
+  const openProfileModal = () => {
+    setEditProfile({ ...userProfile });
+    setModal('profile');
+  };
+
+  const saveProfile = () => {
+    updateProfile(editProfile);
+    setModal(null);
+    Taro.showToast({ title: '资料已保存', icon: 'success' });
+    Taro.vibrateShort({ type: 'medium' });
+  };
+
+  // --- 训练记录 ---
+  const [newTraining, setNewTraining] = useState({
+    sportType: userProfile.mainSport as SportType,
+    duration: 45,
+    intensity: 3,
+    note: '',
+    completed: true
+  });
+
+  const openTrainingModal = () => {
+    setNewTraining({ sportType: userProfile.mainSport, duration: 45, intensity: 3, note: '', completed: true });
+    setModal('training');
+  };
+
+  const saveTraining = () => {
+    addTrainingRecord(newTraining);
+    setModal(null);
+    Taro.showToast({ title: '训练已记录', icon: 'success' });
+    Taro.vibrateShort({ type: 'medium' });
+  };
+
+  const handleDeleteTraining = (id: string) => {
+    Taro.showModal({
+      title: '删除训练记录',
+      content: '确认删除这条训练记录？周报统计也会同步更新。',
+      confirmText: '删除',
+      confirmColor: '#EF4444',
+      success: (res) => {
+        if (res.confirm) {
+          deleteTrainingRecord(id);
+          Taro.showToast({ title: '已删除', icon: 'success' });
+        }
+      }
+    });
+  };
+
+  // --- 趋势数据 ---
+  const weeklyTrend = useMemo(() => getWeeklyTrend(), [
+    assessments.length,
+    painRecords.length,
+    trainingRecords.length,
+    reminders.length,
+    reminders.some(r => r.done)
+  ]);
+  const trainingStats = useMemo(() => getWeeklyTrainingStats(), [trainingRecords.length, trainingRecords]);
+  const recoverySummary = getRecoveryStatusSummary();
 
   const filteredCards = useMemo(() => {
     return cat === 'all' ? KNOWLEDGE_CARDS : KNOWLEDGE_CARDS.filter(c => c.category === cat);
   }, [cat]);
 
-  const totalTrainHours = assessments.length * 1.5 + painRecords.length;
-  const recoveryRate = painRecords.length
-    ? Math.round(painRecords.filter(r => r.recoveryStatus === 'recovered' || r.recoveryStatus === 'improving').length / painRecords.length * 100)
-    : 0;
+  const bmi = Math.round(userProfile.weight / Math.pow(userProfile.height / 100, 2) * 10) / 10;
+  const bmiColor = bmi < 18.5 ? '#3B82F6' : bmi <= 24 ? '#10B981' : bmi <= 28 ? '#F59E0B' : '#EF4444';
+
+  const getMetricValue = (day: any, metric: TrendMetric): number => {
+    switch (metric) {
+      case 'risk': return day.riskScore;
+      case 'pain': return day.painCount;
+      case 'recovery': return day.recoveryImprovingCount;
+      case 'training': return day.trainingHours;
+      default: return 0;
+    }
+  };
+
+  const getMetricMax = (metric: TrendMetric): number => {
+    const values = weeklyTrend.map(d => getMetricValue(d, metric));
+    const max = Math.max(...values, metric === 'risk' ? 60 : metric === 'training' ? 2 : 3);
+    return Math.max(max, 1);
+  };
 
   const handleCall = () => {
     Taro.makePhoneCall({ phoneNumber: userProfile.emergencyContact || '120' }).catch(() => {});
@@ -50,8 +156,26 @@ const ProfilePage: React.FC = () => {
     });
   };
 
+  const weekTrainingRecords = useMemo(() => {
+    const cutoff = Date.now() - WEEK_MS;
+    return [...trainingRecords].filter(t => t.timestamp >= cutoff).sort((a, b) => b.timestamp - a.timestamp);
+  }, [trainingRecords.length, trainingRecords]);
+
+  const avgRisk = useMemo(() => {
+    const recent = assessments.filter(a => a.timestamp >= Date.now() - WEEK_MS);
+    if (recent.length === 0) return 0;
+    return Math.round(recent.reduce((s, a) => s + a.score, 0) / recent.length);
+  }, [assessments]);
+
+  const painCount = painRecords.filter(r => r.timestamp >= Date.now() - WEEK_MS).length;
+
+  const sportIcon = (s: SportType) => SPORT_OPTIONS.find(o => o.key === s)?.icon || '🏃';
+
+  const metricMax = getMetricMax(trendMetric);
+
   return (
     <ScrollView scrollY className={styles.page}>
+      {/* --- 个人资料卡 --- */}
       <View className={styles.profileCard}>
         <View className={styles.profileTop}>
           <View className={styles.avatar}>
@@ -60,7 +184,10 @@ const ProfilePage: React.FC = () => {
           <View className={styles.info}>
             <Text className={styles.userName}>{userProfile.name}</Text>
             <Text className={styles.userSport}>
-              🏆 主项：{getSportTypeName(userProfile.mainSport)} · 每周{userProfile.trainingFrequency}次
+              {sportIcon(userProfile.mainSport)} 主项：{getSportTypeName(userProfile.mainSport)} · 每周{userProfile.trainingFrequency}次
+            </Text>
+            <Text className={styles.userContact}>
+              🚨 紧急联系人：{userProfile.emergencyContact}
             </Text>
           </View>
         </View>
@@ -79,81 +206,170 @@ const ProfilePage: React.FC = () => {
             <Text className={styles.bioLabel}>体重(kg)</Text>
           </View>
           <View className={styles.bioItem}>
-            <Text className={styles.bioNum}>{Math.round(userProfile.weight / Math.pow(userProfile.height / 100, 2))}</Text>
+            <Text className={styles.bioNum} style={{ color: bmiColor }}>{bmi}</Text>
             <Text className={styles.bioLabel}>BMI</Text>
           </View>
         </View>
 
-        <View
-          className={styles.editBtn}
-          onClick={() => Taro.showToast({ title: '资料编辑开发中', icon: 'none' })}
-        >
+        <View className={styles.editBtn} onClick={openProfileModal}>
           ✏️ 编辑个人资料
         </View>
       </View>
 
+      {/* --- 周报趋势 --- */}
       <View className={styles.sectionCard}>
         <View className={styles.sectionHeader}>
           <View className={styles.sectionTitle}>
             <Text className={styles.sectionIcon}>📊</Text>
-            <Text>本周趋势周报</Text>
+            <Text>近7天数据周报</Text>
           </View>
-          <Text className={styles.moreBtn}>查看详情 →</Text>
+          <Text className={styles.moreBtn}>基于真实记录</Text>
         </View>
 
         <View className={styles.trendChart}>
-          <Text style={{ fontSize: 26, color: '#64748B', marginBottom: 16, display: 'block' }}>
-            风险评分 & 疼痛次数（近7天）
+          <Text className={styles.trendTitle}>
+            展示维度：{TREND_METRICS.find(m => m.key === trendMetric)?.name}（{TREND_METRICS.find(m => m.key === trendMetric)?.unit}）
           </Text>
-          <View className={styles.trendRow}>
-            {trend.map((t, i) => (
-              <View key={i} className={styles.trendBarWrap}>
-                <View style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: 4 }}>
-                  <View
-                    className={classnames(styles.trendBar, styles.risk)}
-                    style={{ height: `${(t.riskScore / maxRisk) * 160 + 4}rpx` }}
-                  />
-                  <View
-                    className={styles.trendBar}
-                    style={{ height: `${(t.painCount / maxPain) * 80 + 2}rpx` }}
-                  />
-                </View>
-                <Text className={styles.trendLabel}>{t.date}</Text>
+
+          <View className={styles.trendTabs}>
+            {TREND_METRICS.map(m => (
+              <View
+                key={m.key}
+                className={classnames(styles.trendTab, { [styles.active]: trendMetric === m.key })}
+                onClick={() => { setTrendMetric(m.key); Taro.vibrateShort({ type: 'light' }); }}
+              >
+                {m.name}
               </View>
             ))}
           </View>
+
+          <View className={styles.trendRow}>
+            {weeklyTrend.map((day, i) => {
+              const val = getMetricValue(day, trendMetric);
+              const h = Math.round((val / metricMax) * 200);
+              return (
+                <View key={i} className={styles.trendBarWrap}>
+                  <View className={styles.trendBars}>
+                    <View
+                      className={classnames(styles.trendBar, styles[trendMetric])}
+                      style={{ height: `${Math.max(h, 4)}rpx` }}
+                    />
+                  </View>
+                  <Text className={styles.trendValue}>{val > 0 ? val : ''}</Text>
+                  <Text className={styles.trendLabel}>{day.date}</Text>
+                </View>
+              );
+            })}
+          </View>
+
           <View className={styles.trendLegend}>
             <View className={styles.legendItem}>
               <View className={styles.legendDot} style={{ background: '#F59E0B' }} />
               <Text>风险评分</Text>
             </View>
             <View className={styles.legendItem}>
-              <View className={styles.legendDot} style={{ background: '#10B981' }} />
+              <View className={styles.legendDot} style={{ background: '#EF4444' }} />
               <Text>疼痛次数</Text>
+            </View>
+            <View className={styles.legendItem}>
+              <View className={styles.legendDot} style={{ background: '#8B5CF6' }} />
+              <Text>好转记录</Text>
+            </View>
+            <View className={styles.legendItem}>
+              <View className={styles.legendDot} style={{ background: '#3B82F6' }} />
+              <Text>训练时长</Text>
             </View>
           </View>
         </View>
 
+        {/* 汇总统计 */}
         <View className={styles.statsGrid}>
           <View className={styles.statItem}>
-            <Text className={styles.statNum}>{assessments.length}</Text>
-            <Text className={styles.statLabel}>风险评估</Text>
+            <Text className={classnames(styles.statNum, { [styles.warn]: avgRisk >= 35 && avgRisk < 60, [styles.danger]: avgRisk >= 60 })}>
+              {avgRisk}
+            </Text>
+            <Text className={styles.statLabel}>周均风险</Text>
           </View>
           <View className={styles.statItem}>
-            <Text className={styles.statNum}>{painRecords.length}</Text>
+            <Text className={classnames(styles.statNum, { [styles.danger]: painCount > 3 })}>{painCount}</Text>
             <Text className={styles.statLabel}>疼痛记录</Text>
           </View>
           <View className={styles.statItem}>
-            <Text className={styles.statNum}>{totalTrainHours.toFixed(1)}h</Text>
-            <Text className={styles.statLabel}>训练时长</Text>
+            <Text className={styles.statNum} style={{ color: '#8B5CF6' }}>
+              {recoverySummary.improving + recoverySummary.recovered}
+            </Text>
+            <Text className={styles.statLabel}>好转次数</Text>
           </View>
           <View className={styles.statItem}>
-            <Text className={styles.statNum}>{recoveryRate}%</Text>
-            <Text className={styles.statLabel}>好转率</Text>
+            <Text className={styles.statNum} style={{ color: '#3B82F6' }}>{trainingStats.totalHours}h</Text>
+            <Text className={styles.statLabel}>训练时长</Text>
           </View>
+        </View>
+
+        {/* --- 训练记录（独立） --- */}
+        <View className={styles.trainingSection}>
+          <View className={styles.sectionHeader}>
+            <View className={styles.sectionTitle}>
+              <Text className={styles.sectionIcon}>🏋️</Text>
+              <Text>训练记录（本周）</Text>
+            </View>
+          </View>
+
+          <View className={styles.trainingStats}>
+            <View className={styles.trainingStat}>
+              <Text className={styles.tsNum}>{trainingStats.totalHours}h</Text>
+              <Text className={styles.tsLabel}>总时长</Text>
+            </View>
+            <View className={styles.trainingStat}>
+              <Text className={styles.tsNum}>{trainingStats.completedCount}/{trainingStats.totalCount}</Text>
+              <Text className={styles.tsLabel}>完成率</Text>
+            </View>
+            <View className={styles.trainingStat}>
+              <Text className={styles.tsNum}>{trainingStats.avgIntensity || '-'}</Text>
+              <Text className={styles.tsLabel}>平均强度</Text>
+            </View>
+          </View>
+
+          <Button className={styles.addTrainingBtn} onClick={openTrainingModal}>
+            ＋ 记录今天的训练
+          </Button>
+
+          {weekTrainingRecords.length > 0 ? weekTrainingRecords.map(t => (
+            <View key={t.id} className={classnames(styles.trainingItem, { [styles.done]: t.completed })}>
+              <View className={styles.trainingIcon}>{sportIcon(t.sportType)}</View>
+              <View className={styles.trainingInfo}>
+                <Text className={styles.trainingName}>
+                  {getSportTypeName(t.sportType)}训练
+                  {t.note && <Text style={{ fontSize: 22, color: '#94A3B8', fontWeight: 400 }}> · {t.note}</Text>}
+                </Text>
+                <View className={styles.trainingMeta}>
+                  <Text style={{ color: '#64748B', fontSize: 22 }}>
+                    {new Date(t.timestamp).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}
+                  </Text>
+                  <View className={styles.tmTag}>⏱ {t.duration}分钟</View>
+                  <View className={styles.tmTag}>💪 强度{t.intensity}/5</View>
+                  {t.completed && <View className={styles.tmTag} style={{ background: '#ECFDF5', color: '#059669' }}>已完成</View>}
+                </View>
+              </View>
+              <View className={styles.trainingActions}>
+                <View
+                  className={styles.tCheck}
+                  onClick={() => { toggleTrainingRecord(t.id); Taro.vibrateShort({ type: 'light' }); }}
+                >
+                  {t.completed ? '✓' : ''}
+                </View>
+                <Text className={styles.tDelete} onClick={() => handleDeleteTraining(t.id)}>删除</Text>
+              </View>
+            </View>
+          )) : (
+            <View className={styles.emptyHint}>
+              暂无本周训练记录，点击上方按钮开始记录
+            </View>
+          )}
         </View>
       </View>
 
+      {/* --- 知识库 --- */}
       <View className={styles.sectionCard}>
         <View className={styles.sectionHeader}>
           <View className={styles.sectionTitle}>
@@ -167,7 +383,7 @@ const ProfilePage: React.FC = () => {
           {CATS.map(c => (
             <View
               key={c.key}
-              className={classnames(cat === c.key ? styles.active : '', styles.catTab)}
+              className={classnames(styles.catTab, { [styles.active]: cat === c.key })}
               onClick={() => { setCat(c.key); Taro.vibrateShort({ type: 'light' }); }}
             >
               {c.name}
@@ -198,6 +414,7 @@ const ProfilePage: React.FC = () => {
         )}
       </View>
 
+      {/* --- 实用工具 + 紧急联系 --- */}
       <View className={styles.sectionCard}>
         <View className={styles.sectionHeader}>
           <View className={styles.sectionTitle}>
@@ -234,10 +451,255 @@ const ProfilePage: React.FC = () => {
         </View>
       </View>
 
-      <View style={{ textAlign: 'center', padding: '32rpx 0', color: '#94A3B8', fontSize: 22 }}>
+      <View className={styles.footer}>
         运动损伤预防 v1.0.0{'\n'}
         ⚠️ 本小程序仅供参考，严重损伤请及时就医
       </View>
+
+      {/* --- 编辑个人资料 Modal --- */}
+      {modal === 'profile' && (
+        <View className={styles.modalMask} onClick={() => setModal(null)}>
+          <View className={styles.modalContent} onClick={e => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>编辑个人资料</Text>
+              <View className={styles.modalClose} onClick={() => setModal(null)}>×</View>
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>昵称</Text>
+              <Input
+                className={styles.formInput}
+                value={editProfile.name}
+                onInput={e => setEditProfile({ ...editProfile, name: e.detail.value })}
+                maxlength={20}
+              />
+            </View>
+
+            <View className={styles.formRow}>
+              <View className={styles.formRowItem}>
+                <View className={styles.formGroup}>
+                  <Text className={styles.formLabel}>年龄</Text>
+                  <Input
+                    className={styles.formInput}
+                    type="number"
+                    value={String(editProfile.age)}
+                    onInput={e => setEditProfile({ ...editProfile, age: parseInt(e.detail.value) || 0 })}
+                  />
+                </View>
+              </View>
+              <View className={styles.formRowItem}>
+                <View className={styles.formGroup}>
+                  <Text className={styles.formLabel}>性别</Text>
+                  <View className={styles.optionGroup}>
+                    {[{ k: 'male', n: '男' }, { k: 'female', n: '女' }, { k: 'other', n: '其他' }].map(o => (
+                      <View
+                        key={o.k}
+                        className={classnames(styles.optionItem, { [styles.selected]: editProfile.gender === o.k })}
+                        onClick={() => setEditProfile({ ...editProfile, gender: o.k as any })}
+                      >
+                        {o.n}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View className={styles.formRow}>
+              <View className={styles.formRowItem}>
+                <View className={styles.formGroup}>
+                  <Text className={styles.formLabel}>身高(cm)</Text>
+                  <Input
+                    className={styles.formInput}
+                    type="digit"
+                    value={String(editProfile.height)}
+                    onInput={e => setEditProfile({ ...editProfile, height: parseInt(e.detail.value) || 0 })}
+                  />
+                </View>
+              </View>
+              <View className={styles.formRowItem}>
+                <View className={styles.formGroup}>
+                  <Text className={styles.formLabel}>体重(kg)</Text>
+                  <Input
+                    className={styles.formInput}
+                    type="digit"
+                    value={String(editProfile.weight)}
+                    onInput={e => setEditProfile({ ...editProfile, weight: parseInt(e.detail.value) || 0 })}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>常用运动</Text>
+              <View className={styles.optionGroup}>
+                {SPORT_OPTIONS.map(o => (
+                  <View
+                    key={o.key}
+                    className={classnames(styles.optionItem, { [styles.selected]: editProfile.mainSport === o.key })}
+                    onClick={() => setEditProfile({ ...editProfile, mainSport: o.key })}
+                  >
+                    {o.icon} {o.name}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className={styles.formGroup}>
+              <View className={styles.sliderRow}>
+                <Text className={styles.formLabel} style={{ margin: 0 }}>每周训练频次</Text>
+                <Text className={styles.sliderValue}>{editProfile.trainingFrequency} 次/周</Text>
+              </View>
+              <Slider
+                min={0}
+                max={7}
+                step={1}
+                value={editProfile.trainingFrequency}
+                activeColor="#10B981"
+                blockColor="#10B981"
+                blockSize={28}
+                onChange={e => setEditProfile({ ...editProfile, trainingFrequency: e.detail.value })}
+              />
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>紧急联系人电话</Text>
+              <Input
+                className={styles.formInput}
+                type="number"
+                value={editProfile.emergencyContact}
+                onInput={e => setEditProfile({ ...editProfile, emergencyContact: e.detail.value })}
+                maxlength={15}
+                placeholder="如120或家人电话"
+              />
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>过敏史/慢性病</Text>
+              <Input
+                className={styles.formInput}
+                value={editProfile.allergies}
+                onInput={e => setEditProfile({ ...editProfile, allergies: e.detail.value })}
+                placeholder="无"
+                maxlength={50}
+              />
+            </View>
+
+            <View className={styles.modalBtnRow}>
+              <Button className={classnames(styles.modalBtn, styles.secondary)} onClick={() => setModal(null)}>
+                取消
+              </Button>
+              <Button className={classnames(styles.modalBtn, styles.primary)} onClick={saveProfile}>
+                保存资料
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* --- 新增训练 Modal --- */}
+      {modal === 'training' && (
+        <View className={styles.modalMask} onClick={() => setModal(null)}>
+          <View className={styles.modalContent} onClick={e => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>记录今天的训练</Text>
+              <View className={styles.modalClose} onClick={() => setModal(null)}>×</View>
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>运动类型</Text>
+              <View className={styles.optionGroup}>
+                {SPORT_OPTIONS.map(o => (
+                  <View
+                    key={o.key}
+                    className={classnames(styles.optionItem, { [styles.selected]: newTraining.sportType === o.key })}
+                    onClick={() => setNewTraining({ ...newTraining, sportType: o.key })}
+                  >
+                    {o.icon} {o.name}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className={styles.formGroup}>
+              <View className={styles.sliderRow}>
+                <Text className={styles.formLabel} style={{ margin: 0 }}>训练时长</Text>
+                <Text className={styles.sliderValue}>{newTraining.duration} 分钟</Text>
+              </View>
+              <Slider
+                min={10}
+                max={180}
+                step={5}
+                value={newTraining.duration}
+                activeColor="#3B82F6"
+                blockColor="#3B82F6"
+                blockSize={28}
+                onChange={e => setNewTraining({ ...newTraining, duration: e.detail.value })}
+              />
+            </View>
+
+            <View className={styles.formGroup}>
+              <View className={styles.sliderRow}>
+                <Text className={styles.formLabel} style={{ margin: 0 }}>训练强度</Text>
+                <Text className={styles.sliderValue}>
+                  {newTraining.intensity}/5
+                  <Text style={{ fontSize: 24, fontWeight: 400, color: '#64748B' }}>
+                    （{['', '轻松', '较低', '中等', '较高', '极限'][newTraining.intensity]}）
+                  </Text>
+                </Text>
+              </View>
+              <Slider
+                min={1}
+                max={5}
+                step={1}
+                value={newTraining.intensity}
+                activeColor={newTraining.intensity >= 4 ? '#EF4444' : newTraining.intensity >= 3 ? '#F59E0B' : '#10B981'}
+                blockColor={newTraining.intensity >= 4 ? '#EF4444' : newTraining.intensity >= 3 ? '#F59E0B' : '#10B981'}
+                blockSize={28}
+                onChange={e => setNewTraining({ ...newTraining, intensity: e.detail.value })}
+              />
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>备注（可选）</Text>
+              <Input
+                className={styles.formInput}
+                value={newTraining.note}
+                onInput={e => setNewTraining({ ...newTraining, note: e.detail.value })}
+                placeholder="如：5公里配速5:30、肩推30kg等"
+                maxlength={30}
+              />
+            </View>
+
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>状态</Text>
+              <View className={styles.optionGroup}>
+                <View
+                  className={classnames(styles.optionItem, { [styles.selected]: newTraining.completed })}
+                  onClick={() => setNewTraining({ ...newTraining, completed: true })}
+                >
+                  ✅ 已完成
+                </View>
+                <View
+                  className={classnames(styles.optionItem, { [styles.selected]: !newTraining.completed })}
+                  onClick={() => setNewTraining({ ...newTraining, completed: false })}
+                >
+                  ⏳ 计划中
+                </View>
+              </View>
+            </View>
+
+            <View className={styles.modalBtnRow}>
+              <Button className={classnames(styles.modalBtn, styles.secondary)} onClick={() => setModal(null)}>
+                取消
+              </Button>
+              <Button className={classnames(styles.modalBtn, styles.primary)} onClick={saveTraining}>
+                保存记录
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };

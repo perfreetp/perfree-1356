@@ -47,17 +47,28 @@
 .userSport {
   font-size: $font-size-md;
   opacity: 0.9;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.userContact {
+  font-size: $font-size-sm;
+  opacity: 0.8;
 }
 
 .bioInfo {
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
   padding-top: $spacing-lg;
   border-top: 1rpx solid rgba(255,255,255,0.2);
 }
 
 .bioItem {
   text-align: center;
+  padding: $spacing-xs;
+  background: rgba(255,255,255,0.08);
+  border-radius: $radius-sm;
 }
 
 .bioNum {
@@ -68,17 +79,18 @@
 }
 
 .bioLabel {
-  font-size: $font-size-sm;
+  font-size: 22rpx;
   opacity: 0.85;
 }
 
 .editBtn {
   margin-top: $spacing-lg;
-  padding: $spacing-sm;
+  padding: $spacing-md;
   background: rgba(255,255,255,0.15);
   border-radius: $radius-md;
   text-align: center;
   font-size: $font-size-sm;
+  font-weight: 500;
   &:active { background: rgba(255,255,255,0.25); }
 }
 
@@ -113,20 +125,48 @@
 .moreBtn {
   font-size: $font-size-sm;
   color: $color-primary;
+  font-weight: 500;
 }
 
 .trendChart {
   padding: $spacing-md 0;
 }
 
+.trendTitle {
+  font-size: 26rpx;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.trendTabs {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.trendTab {
+  padding: 8rpx 20rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  background: $color-divider;
+  color: $color-text-secondary;
+  font-weight: 500;
+
+  &.active {
+    background: $color-primary;
+    color: #fff;
+  }
+}
+
 .trendRow {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 200rpx;
+  height: 280rpx;
   padding: 0 $spacing-sm;
   margin-bottom: $spacing-md;
-  gap: $spacing-xs;
+  gap: 8rpx;
 }
 
 .trendBarWrap {
@@ -138,29 +178,50 @@
   justify-content: flex-end;
 }
 
+.trendBars {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 200rpx;
+  gap: 4rpx;
+}
+
 .trendBar {
   width: 100%;
-  max-width: 56rpx;
-  border-radius: $radius-xs $radius-xs 0 0;
-  background: linear-gradient(180deg, $color-primary 0%, $color-primary-light 100%);
+  max-width: 44rpx;
+  border-radius: 6rpx 6rpx 0 0;
+  background: linear-gradient(180deg, #10B981 0%, #34D399 100%);
   transition: height $transition-base ease;
-  position: relative;
 
-  &.risk { background: linear-gradient(180deg, $color-warning 0%, $color-secondary-light 100%); }
+  &.risk { background: linear-gradient(180deg, #F59E0B 0%, #FBBF24 100%); }
+  &.pain { background: linear-gradient(180deg, #EF4444 0%, #F87171 100%); }
+  &.recovery { background: linear-gradient(180deg, #8B5CF6 0%, #A78BFA 100%); }
+  &.training { background: linear-gradient(180deg, #3B82F6 0%, #60A5FA 100%); }
+}
+
+.trendValue {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  height: 28rpx;
+  line-height: 28rpx;
 }
 
 .trendLabel {
   font-size: 20rpx;
   color: $color-text-tertiary;
-  margin-top: $spacing-xs;
+  margin-top: 4rpx;
 }
 
 .trendLegend {
   display: flex;
-  justify-content: center;
-  gap: $spacing-lg;
+  flex-wrap: wrap;
+  gap: $spacing-md;
   padding-top: $spacing-md;
   border-top: 1rpx solid $color-divider;
+  justify-content: center;
 }
 
 .legendItem {
@@ -172,16 +233,16 @@
 }
 
 .legendDot {
-  width: 20rpx;
-  height: 20rpx;
-  border-radius: $radius-xs;
+  width: 24rpx;
+  height: 12rpx;
+  border-radius: 4rpx;
 }
 
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: $spacing-md;
-  margin-top: $spacing-md;
+  margin-top: $spacing-lg;
 }
 
 .statItem {
@@ -197,12 +258,149 @@
   font-weight: 700;
   color: $color-primary;
   line-height: 1.2;
+
+  &.warn { color: #F59E0B; }
+  &.danger { color: #EF4444; }
 }
 
 .statLabel {
   font-size: 22rpx;
   color: $color-text-secondary;
   margin-top: 4rpx;
+  display: block;
+}
+
+.trainingSection {
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1rpx solid $color-divider;
+}
+
+.trainingStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.trainingStat {
+  text-align: center;
+  padding: $spacing-md $spacing-sm;
+  background: $color-primary-50;
+  border-radius: $radius-md;
+}
+
+.tsNum {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $color-primary;
+  line-height: 1.2;
+}
+
+.tsLabel {
+  font-size: 22rpx;
+  color: $color-primary-dark;
+  margin-top: 4rpx;
+}
+
+.addTrainingBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  background: $color-primary;
+  color: #fff;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: 600;
+  margin-bottom: $spacing-md;
+  &:active { opacity: 0.85; transform: scale(0.98); }
+}
+
+.trainingItem {
+  background: #fff;
+  border: 2rpx solid $color-divider;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+  transition: all $transition-base;
+
+  &.done { opacity: 0.6; }
+}
+
+.trainingIcon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-md;
+  background: $color-primary-50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  margin-right: $spacing-md;
+}
+
+.trainingInfo {
+  flex: 1;
+}
+
+.trainingName {
+  font-size: $font-size-md;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  .done & { text-decoration: line-through; color: $color-text-tertiary; }
+}
+
+.trainingMeta {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tmTag {
+  padding: 2rpx 12rpx;
+  border-radius: $radius-xs;
+  background: $color-divider;
+  font-size: 22rpx;
+}
+
+.trainingActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  align-items: flex-end;
+}
+
+.tCheck {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+  .done & {
+    background: $color-success;
+    border-color: $color-success;
+  }
+}
+
+.tDelete {
+  font-size: 20rpx;
+  color: $color-danger;
+  padding: 2rpx 8rpx;
 }
 
 .categoryTabs {
@@ -215,7 +413,7 @@
 
 .catTab {
   padding: 12rpx 24rpx;
-  border-radius: $radius-round;
+  border-radius: $radius-button;
   font-size: $font-size-sm;
   background: $color-divider;
   color: $color-text-secondary;
@@ -274,6 +472,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-md;
+  margin-top: $spacing-md;
 }
 
 .featureItem {
@@ -295,4 +494,154 @@
   font-size: $font-size-sm;
   color: $color-text-primary;
   font-weight: 500;
+}
+
+.modalMask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+}
+
+.modalContent {
+  width: 100%;
+  background: #fff;
+  border-radius: $radius-xl $radius-xl 0 0;
+  padding: $spacing-xl $spacing-lg $spacing-xl;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+}
+
+.modalTitle {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $color-text-primary;
+}
+
+.modalClose {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: $color-divider;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: $color-text-secondary;
+}
+
+.formGroup {
+  margin-bottom: $spacing-lg;
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.formInput {
+  width: 100%;
+  height: 88rpx;
+  background: $color-divider;
+  border-radius: $radius-md;
+  padding: 0 $spacing-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.formRow {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.formRowItem {
+  flex: 1;
+}
+
+.optionGroup {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.optionItem {
+  padding: 16rpx 28rpx;
+  background: $color-divider;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+
+  &.selected {
+    background: $color-primary-50;
+    border-color: $color-primary;
+    color: $color-primary-dark;
+    font-weight: 500;
+  }
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.sliderValue {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $color-primary;
+}
+
+.modalBtnRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+}
+
+.modalBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: 600;
+
+  &.primary {
+    background: $color-primary;
+    color: #fff;
+    &:active { opacity: 0.9; }
+  }
+  &.secondary {
+    background: $color-divider;
+    color: $color-text-secondary;
+  }
+}
+
+.footer {
+  text-align: center;
+  padding: $spacing-lg 0;
+  color: $color-text-tertiary;
+  font-size: 22rpx;
+  line-height: 1.8;
+}
+
+.emptyHint {
+  padding: $spacing-lg;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
 }
